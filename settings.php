@@ -35,7 +35,7 @@ if(!function_exists('getallheaders')){
 }
 
 function explodeException($error){
-    if(isset(\PSF::getConfig()->pgf['debug']) && \PSF::getConfig()->pgf['debug']){
+    if(isset(\PSF::getConfig()->settings['debug']) && \PSF::getConfig()->settings['debug']){
         Http::response("Error completing a request, contact the technical team", [
             'code'  => $error->getCode(),
             'msg'   => $error->getMessage(),

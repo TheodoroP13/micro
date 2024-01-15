@@ -1,6 +1,6 @@
 <?php
 
-namespace Prospera\Helpers;
+namespace Prospera\Helper;
 
 use \Prospera\Http\Http;
 

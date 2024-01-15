@@ -1,6 +1,6 @@
 <?php
 
-namespace Pgf\Model;
+namespace Prospera\Model;
 
 trait EnumTrait{
 	public static function verifyCaseExistByKey($key){
@@ -26,7 +26,7 @@ trait EnumTrait{
 
 	public static function getListByMethod($method) : array{
 		foreach(self::cases() as $item){
-            $itens[] = $item->callApi();
+            $itens[] = $item->{$method}();
         }
 
         return $itens ?? [];

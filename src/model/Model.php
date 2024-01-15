@@ -4,7 +4,7 @@ namespace Prospera\Model;
 
 use \Prospera\Database\{Connect, Create, Delete, Update};
 use \Prospera\Model\ModelQuery;
-use \Prospera\Helpers\UUID;
+use \Prospera\Helper\UUID;
 use \Prospera\Http\Http;
 
 use \Prospera\Enumerators\{DBDriver};
