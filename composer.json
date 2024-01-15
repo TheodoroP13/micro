@@ -1,0 +1,32 @@
+{
+    "name": "prospera/framework",
+    "description": "Framework para o desenvolvimento de webapps Prospera",
+    "type": "library",
+    "autoload": {
+        "files": [
+            "settings.php"
+        ],
+        "psr-4": {
+            "Prospera\\Database\\": "src/database/",
+            "Prospera\\Model\\": "src/model/",
+            "Prospera\\Api\\": "src/api/",
+            "Prospera\\Helper\\": "src/helpers/",
+            "Prospera\\Http\\": "src/http/",
+            "Prospera\\Utils\\": "src/utils/",
+            "Prospera\\Enumerators\\": "src/enum/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Theodoro Paim",
+            "email": "theodoro@prosperasistemas.com"
+        }
+    ],
+    "require": {
+        "php": ">8.0",
+        "phpmailer/phpmailer": "^6.1",
+        "jenssegers/agent": "^2.6",
+        "aws/aws-sdk-php": "^3.270"
+    },
+    "minimum-stability": "dev"
+}
