@@ -95,20 +95,16 @@ class ModelQuery{
                     if(class_exists($explodeField[0])){
                         if($driver == DBDriver::MySQL){
                             $field = '`' . (new $explodeField[0])->getTableName() . '`.`' . ($this->handleAliasField($explodeField[1])) . '`';
-                            echo 31;
                         }
 
                         if($driver == DBDriver::SQLServer){
                             $field = $this->handleAliasField($explodeField[1]);
-                            echo 32;
                         }
 
                         if(!isset($field)){
                             $field = (new $explodeField[0])->getTableName() . ($this->handleAliasField($explodeField[1]));
-                            echo 33;
                         }
                     }else{
-                        echo 34;
                         $field = ($explodeField[0] . $this->handleAliasField($explodeField[1]));
                     }
 
@@ -117,7 +113,6 @@ class ModelQuery{
                     // echo 1;
                     return $field;
                 }else if(count($explodeField) > 2){
-                    echo 2;
                     return $field;
                 }else{
                     if($driver == DBDriver::MySQL){
@@ -129,12 +124,9 @@ class ModelQuery{
                         return "[" . $field . "]";
                     }
 
-                    echo 3;
-
                     return $this->obj->tableName . "." . $field;
                 }
             }else{
-                echo 4;
                 return $field;
             }
         }
