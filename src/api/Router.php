@@ -2,8 +2,8 @@
 
 namespace Prospera\Api;
 
-use \Pgf\Http\StatusCode;
-use \Pgf\Http\Http;
+use \Prospera\Http\StatusCode;
+use \Prospera\Http\Http;
 
 #[Attribute]
 class Router{
@@ -25,7 +25,7 @@ class Router{
 
 	private function getRoutesList(){
 		function getMethodsOnTheController(string $file){
-			$explodeFileName = explode("/", str_replace(\PGF::getConfig()->pgf['controllers'], '', $file));
+			$explodeFileName = explode("/", str_replace(\PSF::getConfig()->settings['controllers'], '', $file));
             $getControllerName = $explodeFileName[count($explodeFileName) - 1];
             $replaceName = str_replace(".php", "", $getControllerName);
 
@@ -91,7 +91,7 @@ class Router{
 			return $arrListController;
 		}
 
-        $this->setRoutes(mapPathRoutes(\PGF::getConfig()->pgf['controllers']));
+        $this->setRoutes(mapPathRoutes(\PSF::getConfig()->settings['controllers']));
 	}
 
 	private function setRoutes(array $arr){
@@ -179,7 +179,7 @@ class Router{
 
 			if(is_callable([new $filterMetch['class'], $filterMetch['name']])){
 				if(isset($filterMetch['attributes']['arguments']['middlewares']) && is_array($filterMetch['attributes']['arguments']['middlewares']) && in_array('authentication', $filterMetch['attributes']['arguments']['middlewares'])){
-					$verifyAuth = \PGF::getConfig()->pgf['verifyauth'] ?? false;
+					$verifyAuth = \PSF::getConfig()->settings['verifyauth'] ?? false;
 
 					if(!empty($verifyAuth) && $verifyAuth != false){
 						$objVerify = new $verifyAuth[0];
@@ -203,7 +203,7 @@ class Router{
 				$return = call_user_func_array([new $filterMetch['class'], $filterMetch['name']], $this->fields);
 					
 				if(isset($filterMetch['attributes']['arguments']['middlewares']) && is_array($filterMetch['attributes']['arguments']['middlewares']) && in_array('loggin', $filterMetch['attributes']['arguments']['middlewares']) && !in_array('webview', $filterMetch['attributes']['arguments']['middlewares'])){
-					$logRequest = \PGF::getConfig()->pgf['logrequest'] ?? false;
+					$logRequest = \PSF::getConfig()->settings['logrequest'] ?? false;
 					if(!empty($logRequest) && $logRequest != false){
 						$logObj = new $logRequest[0];
 						if(is_callable([$logObj, $logRequest[1]])){
