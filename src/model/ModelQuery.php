@@ -12,18 +12,19 @@ class ModelQuery{
         $this->obj = new $class;
 
         $this->query = [
-            'fields'        => null,
-            'wheres'        => null,
-            'orWheres'      => null,
-            'innerJoins'    => null,
-            'leftJoins'     => null,
-            'orderBy'       => null,
-            'groupBy'       => null,
-            'limit'         => null,
-            'parses'        => null,
-            'freequery'     => null,
-            'isCount'       => false,
-            'asArray'       => false,
+            'fields'        => NULL,
+            'wheres'        => NULL,
+            'orWheres'      => NULL,
+            'innerJoins'    => NULL,
+            'leftJoins'     => NULL,
+            'order'         => NULL,
+            'groupBy'       => NULL,
+            'limit'         => NULL,
+            'offset'        => NULL,
+            'parses'        => NULL,
+            'freequery'     => NULL,
+            'isCount'       => FALSE,
+            'asArray'       => FALSE,
             'database'      => $this->obj->database ?? 'default'
         ];
     }
@@ -98,7 +99,7 @@ class ModelQuery{
                         }
 
                         if($driver == DBDriver::SQLServer){
-                            $field = $this->handleAliasField($explodeField[1]);
+                            $field = '[' . (new $explodeField[0])->getTableName() . ']' . $this->handleAliasField($explodeField[1]);
                         }
 
                         if(!isset($field)){
@@ -159,7 +160,7 @@ class ModelQuery{
         }
 
         if($driver == DBDriver::SQLServer){
-            return '[' . $field . ']';
+            return '.[' . $field . ']';
         }
     }   
 
@@ -462,14 +463,12 @@ class ModelQuery{
 
     public function execute(){
         if(property_exists($this->obj, "status")){
-            $this->andWhere(['status', '<>' , -1]);
+            $this->andWhere([$this->obj::class . '.status', '<>' , -1]);
         }
 
-        if(property_exists($this->obj, "deleted")){
-            $this->andWhere($this->obj->tableName . '.deleted IS NULL');
+        if(property_exists($this->obj, "deletado")){
+            $this->andWhere([$this->obj::class . '.deletado', 'IS NULL', NULL]);
         }
-
-        // var_dump($this->writeQuery());
 
         $Read = new \Prospera\Database\Read($this->obj->databaseConnect ?? null);
         $Read->exe(
@@ -489,25 +488,51 @@ class ModelQuery{
         $stringQuery = "SELECT ";
 
         if($driver == DBDriver::SQLServer){
-            if(isset($this->query['limit']) && !empty($this->query['limit'])){
+            if(isset($this->query['limit']) && !empty($this->query['limit']) && $this->query['offset'] === NULL){
                 $stringQuery .= " TOP " . $this->query['limit'] . ' ';
             }
-        }   
+        }  
+
+        if($driver == DBDriver::SQLServer && (isset($this->query['offset']) && $this->query['offset'] !== NULL) && (isset($this->query['limit']) && $this->query['limit'] !== NULL)){
+
+            if($this->query['order'] === NULL && !empty($this->obj->getIdentityColumn())){
+                $this->orderBy($this->obj::class . '.' . $this->obj->getIdentityColumn(), 'ASC');
+                // $stringQuery .= ' ORDER BY [' . $this->obj->tableName . '].[' . $this->obj->getIdentityColumn() . ']';
+            }
+        }
 
         if(isset($this->query['isCount']) && $this->query['isCount'] === true){
-            if(property_exists($this->obj, "code")){
-                $fieldsQuery = "COUNT(" . $this->generateField("code") . ") as qtd";
-            }else{
-                // if(!empty($fieldToCount)){
-
-                // var_dump($this->generateField($this->obj->getColunsForTable())[0]);
-                // die;
+            if($driver == DBDriver::MySQL){
+                if(property_exists($this->obj, "code")){
+                    $fieldsQuery = "COUNT(" . $this->generateField("code") . ") as qtd";
+                }else{
                     $fieldsQuery = "COUNT(" . $this->generateField($this->obj->getColunsForTable()[0]) . ") as qtd";
-                // }
+                }
+            }else if($driver == DBDriver::SQLServer){
+                $this->query['order'] = NULL;
+                // var_dump($this->query);
+                // $fieldsQuery = $this->generateField($this->obj->getColunsForTable()[0]);
+
+                $identity = $this->obj->getIdentityColumn();
+                if(empty($identity)){
+                    $fieldsQuery = "COUNT(" . $this->generateField($this->obj::class . '.' . $this->obj->getColunsForTable()[0]) . ") as qtd";
+                }else{
+                    $fieldsQuery = "COUNT(" . $this->generateField($this->obj::class . '.' . $this->obj->getIdentityColumn()) . ") as qtd";
+                }
+
+                
+                // $fieldsQuery = "COUNT(" . $this->generateField($this->obj->getColunsForTable()[0]) . ") as qtd";
             }
         }else if(!isset($this->query['fields']) || empty($this->query['fields'])){
             if((isset($this->query['innerJoins']) && !empty($this->query['innerJoins'])) || (isset($this->query['leftJoins']) && !empty($this->query['leftJoins']))){
-                $fieldsQuery = '`' . $this->obj->tableName . '`.*';
+
+                if($driver == DBDriver::MySQL){
+                    $fieldsQuery = '`' . $this->obj->tableName . '`.*';
+                }
+
+                if($driver == DBDriver::SQLServer){
+                    $fieldsQuery = '[' . $this->obj->tableName . '].*';
+                }
             }else{
                 $fieldsQuery = '*';
             }
@@ -518,17 +543,13 @@ class ModelQuery{
         $stringQuery .= $fieldsQuery;
         $stringQuery .= " FROM " . $this->handleTableName() . " ";
 
-        // var_dump($this->handleTableName());
-
         if(isset($this->query['innerJoins']) && !empty($this->query['innerJoins'])){
             foreach($this->query['innerJoins'] as $itemJoin){
                 if(is_array($itemJoin['table'])){
                     $tableName = class_exists($itemJoin['table'][0]) ? (new $itemJoin['table'][0])->getTableName() : $itemJoin['table'][0];
-
                     $stringQuery .= " INNER JOIN " . $tableName . " AS " .  $itemJoin['table'][1] . " ON " . $this->handleExtraQuery($itemJoin['query']) . " ";
                 }else{
                     $tableName = class_exists($itemJoin['table']) ? (new $itemJoin['table'])->getTableName() : $itemJoin['table'];
-                    
                     $stringQuery .= " INNER JOIN " . $tableName . " ON " . $this->handleExtraQuery($itemJoin['query']) . " ";
                 }
             }
@@ -621,12 +642,17 @@ class ModelQuery{
             }
         }
 
+        if($driver == DBDriver::SQLServer && (isset($this->query['offset']) && $this->query['offset'] !== NULL) && (isset($this->query['limit']) && $this->query['limit'] !== NULL) && (!isset($this->query['isCount']) || $this->query['isCount'] === false)){
+            $stringQuery .= " OFFSET " . $this->query['offset'] . " ROWS";
+            $stringQuery .= " FETCH NEXT " . $this->query['limit'] . " ROWS ONLY";
+        }
+
         return trim(str_replace("  ", " ", $stringQuery));
     }
 
     public function getRowQuery() : string {
-        if(property_exists($this->obj, "status")){
-            $this->andWhere(['status', '<>' , -1]);
+        if(property_exists($this->obj, 'status')){
+            $this->andWhere([$this->obj::class . '.status', '<>' , -1]);
         }
 
         if(property_exists($this->obj, "deletado")){
@@ -711,9 +737,13 @@ class ModelQuery{
 
     public function countAll() : int{
         $countTotal = clone $this;
-        $countTotal->query['isCount'] = true;
-        $countTotal->query['limit'] = null;
-        $countTotal->query['offset'] = null;
+        $countTotal->query['isCount'] = TRUE;
+        $countTotal->query['limit'] = NULL;
+        $countTotal->query['offset'] = NULL;
+        $countTotal->query['order'] = NULL;
+
+        // var_dump($countTotal->getRowQuery());
+
         return $countTotal->execute();
     }
 
@@ -727,6 +757,10 @@ class ModelQuery{
         $this->query['asArray'] = true;
         $this->query['limit'] = $itensPerPage;
         $this->query['offset'] = $initIn;
+
+        // var_dump($this);
+        // die;
+        // var_dump($this->getRowQuery());
 
         $itens = $this->execute();
         if($itens == false){

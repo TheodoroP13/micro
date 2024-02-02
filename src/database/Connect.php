@@ -56,7 +56,7 @@ class Connect{
     }
 
     public static function listTables($database = 'default'){
-        if(extension_loaded('apcu') && (isset(\PSF::getConfig()->pgf['savedbcache']) && \PSF::getConfig()->pgf['savedbcache'] == TRUE)){
+        if(extension_loaded('apcu') && (isset(\PSF::getConfig()->settings['savedbcache']) && \PSF::getConfig()->settings['savedbcache'] == TRUE)){
             $stringCache = "db_" . \PSF::getConfig()->db[$database]['database'] . "_cache_" . $database;
             $itens = apcu_fetch($stringCache, $recoverOnApcu);
 
@@ -91,7 +91,7 @@ class Connect{
                 
                 self::$tables[$database] = array_values($itens);
 
-                if(extension_loaded('apcu') && (isset(\PSF::getConfig()->pgf['savedbcache']) && \PSF::getConfig()->pgf['savedbcache'] == TRUE)){
+                if(extension_loaded('apcu') && (isset(\PSF::getConfig()->settings['savedbcache']) && \PSF::getConfig()->settings['savedbcache'] == TRUE)){
                     apcu_store($stringCache, array_values($itens), 604800);
                 }
             }
@@ -103,7 +103,7 @@ class Connect{
     public static function getColunsForTable($table, $database = 'default') : array{
         self::getConnection($database);
 
-        if(extension_loaded('apcu') && (isset(\PSF::getConfig()->pgf['savedbcache']) && \PSF::getConfig()->pgf['savedbcache'] == TRUE)){
+        if(extension_loaded('apcu') && (isset(\PSF::getConfig()->settings['savedbcache']) && \PSF::getConfig()->settings['savedbcache'] == TRUE)){
             $stringCache = 'db_' . \PSF::getConfig()->db[$database]['database'] . '_cache_' . \PSF::getConfig()->db[$database]['database'] . '_' . $table;
             $itens = apcu_fetch($stringCache, $recoverOnApcu);
 
@@ -134,11 +134,11 @@ class Connect{
                     $arrReturn[] = $item['Field'];
                 }
                 
-                if(extension_loaded('apcu') && (isset(\PSF::getConfig()->pgf['savedbcache']) && \PSF::getConfig()->pgf['savedbcache'] == TRUE)){
+                if(extension_loaded('apcu') && (isset(\PSF::getConfig()->settings['savedbcache']) && \PSF::getConfig()->settings['savedbcache'] == TRUE)){
                     apcu_store($stringCache, $arrReturn, 604800);
                 }
 
-                return $arrReturn;
+                return $arrReturn ?? [];
             }
         }catch (\PDOException $e){
             explodeException($e); 

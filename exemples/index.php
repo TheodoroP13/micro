@@ -52,19 +52,19 @@ class Solicitacao extends \Prospera\Model\Model{
 	}
 }
 
-// $createSolicitation = (new Solicitacao)->assign([
-// 	'prioridade'	=> 1,
-// 	'status'		=> 1,
-// 	'id_cliente'	=> 1
-// ]);
+$createSolicitation = (new Solicitacao)->assign([
+	'prioridade'	=> 1,
+	'status'		=> 1,
+	'id_cliente'	=> 1
+]);
 
-// $createSolicitation->create();
+$createSolicitation->create();
 
-// var_dump($createSolicitation);
+var_dump($createSolicitation);
 
-$findSolicitation = Solicitacao::find()->andWhere([Solicitacao::class . '.id' => 3])->one();
+// $findSolicitation = Solicitacao::find()->andWhere([Solicitacao::class . '.id' => 3])->one();
 // var_dump($findSolicitation);
 
-if($findSolicitation){
-	$findSolicitation->delete();
-}
+// if($findSolicitation){
+	// $findSolicitation->delete();
+// }
