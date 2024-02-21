@@ -74,6 +74,13 @@ class CheckFields{
 									"msg" => "O campo '" . $key . "' precisa conter uma data válida"
 								];
 							}
+						}else if($item['specialCheck'] == "isArray"){
+							if(!is_array($item['content'])){
+								$errorsArr[] = [
+									"field" => $key,
+									"msg" => "O campo '" . $key . "' espera receber um array de dados"
+								];
+							}
 						}else if($item['specialCheck'] == "array"){
 							if(is_array($item['content']) && isset($item['fields'])){
 								foreach ($item['fields'] as $value){
