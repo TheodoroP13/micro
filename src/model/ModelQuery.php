@@ -73,7 +73,7 @@ class ModelQuery{
         $configDb = \PSF::getConfig()->db;
         $driver = !empty($configDb[$this->query['database']]['driver']) ? $configDb[$this->query['database']]['driver'] : DBDriver::MySQL;
 
-        $arrIgnoreRules = ["SUM", "COUNT"];
+        $arrIgnoreRules = ['SUM', 'COUNT', 'MAX'];
 
         if(is_array($field)){
             $tableName = class_exists($field[0]) ? (new $field[0])->getTableName() : $field[0];
