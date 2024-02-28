@@ -15,7 +15,7 @@ class Webview{
 		array $data 				= [],
 		array $html 				= [],
 	){
-		$themeAssetsPath = \PGF::getConfig()->pgf['webviews']['path'] . DR . \PGF::getConfig()->pgf['webviews']['template'] . DR . "ThemeAssets.php";
+		$themeAssetsPath = \PSF::getConfig()->settings['webviews']['path'] . DR . \PSF::getConfig()->settings['webviews']['template'] . DR . "ThemeAssets.php";
 		$themeAssets = file_exists($themeAssetsPath) ? require_once($themeAssetsPath) : FALSE;
 
 		if(!empty($css)){
@@ -61,7 +61,7 @@ class Webview{
 
 '; 
 
-			$viewPath = \PGF::getConfig()->pgf['webviews']['path'] . DR . \PGF::getConfig()->pgf['webviews']['template'] . DR . 'pages' . DR . $view . '.php';
+			$viewPath = \PSF::getConfig()->settings['webviews']['path'] . DR . \PSF::getConfig()->settings['webviews']['template'] . DR . 'pages' . DR . $view . '.php';
 
 			if(!empty($view) && is_file($viewPath)){
 				ob_start();
