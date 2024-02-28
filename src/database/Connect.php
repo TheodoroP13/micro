@@ -56,19 +56,24 @@ class Connect{
     }
 
     public static function listTables($database = 'default'){
-        if(extension_loaded('apcu') && (isset(\PSF::getConfig()->settings['savedbcache']) && \PSF::getConfig()->settings['savedbcache'] == TRUE)){
-            $stringCache = "db_" . \PSF::getConfig()->db[$database]['database'] . "_cache_" . $database;
-            $itens = apcu_fetch($stringCache, $recoverOnApcu);
+        $configDb = \PSF::getConfig()->db[$database];
 
-            if($recoverOnApcu){
-                self::$tables[$database] = array_values($itens);
-                return TRUE;
+        if(extension_loaded('apcu')){
+            $saveCache = isset($configDb['savecache']) && $configDb['savecache'] == TRUE;
+            
+            if($saveCache){
+                $stringCache = "db_" . $configDb['database'] . "_cache_" . $database;
+                $itens = apcu_fetch($stringCache, $recoverOnApcu);
+
+                if($recoverOnApcu){
+                    self::$tables[$database] = array_values($itens);
+                    return TRUE;
+                }
             }
         }
 
         try{
-            $configDb = \PSF::getConfig()->db;
-            $driver = !empty($configDb[$database]['driver']) ? $configDb[$database]['driver'] : DBDriver::MySQL;
+            $driver = !empty($configDb['driver']) ? $configDb['driver'] : DBDriver::MySQL;
 
             if($driver == DBDriver::MySQL){
                 $statement = self::$connect[$database]->prepare("SHOW TABLES");
@@ -91,57 +96,62 @@ class Connect{
                 
                 self::$tables[$database] = array_values($itens);
 
-                if(extension_loaded('apcu') && (isset(\PSF::getConfig()->settings['savedbcache']) && \PSF::getConfig()->settings['savedbcache'] == TRUE)){
+                if(extension_loaded('apcu') && $saveCache){
                     apcu_store($stringCache, array_values($itens), 604800);
                 }
             }
         }catch (\PDOException $e){
-            explodeException($e);
+            throw new \Exception("Unable to recover database tables");
         }
     }
 
     public static function getColunsForTable($table, $database = 'default') : array{
         self::getConnection($database);
 
-        if(extension_loaded('apcu') && (isset(\PSF::getConfig()->settings['savedbcache']) && \PSF::getConfig()->settings['savedbcache'] == TRUE)){
-            $stringCache = 'db_' . \PSF::getConfig()->db[$database]['database'] . '_cache_' . \PSF::getConfig()->db[$database]['database'] . '_' . $table;
-            $itens = apcu_fetch($stringCache, $recoverOnApcu);
+        $configDb = \PSF::getConfig()->db[$database];
 
-            if($recoverOnApcu){
-                return $itens;
+        if(extension_loaded('apcu')){
+            $saveCache = isset($configDb['savecache']) && $configDb['savecache'] == TRUE;
+            
+            if($saveCache){
+                $stringCache = 'db_' . $configDb['database'] . '_cache_' . $configDb['database'] . '_' . $table;
+                $itens = apcu_fetch($stringCache, $recoverOnApcu);
+
+                if($recoverOnApcu){
+                    return $itens;
+                }
             }
         }
 
         try{
-            $configDb = \PSF::getConfig()->db;
-            $driver = !empty($configDb[$database]['driver']) ? $configDb[$database]['driver'] : DBDriver::MySQL;
+            $driver = !empty($configDb['driver']) ? $configDb['driver'] : DBDriver::MySQL;
 
             if($driver == DBDriver::MySQL){
                 $statement = self::$connect[$database]->prepare("SHOW COLUMNS FROM `" . $table . "`");
             }
 
             if($driver == DBDriver::SQLServer){
-                $statement = self::$connect[$database]->prepare("SELECT COLUMN_NAME as Field
-                FROM INFORMATION_SCHEMA.COLUMNS
-                WHERE TABLE_NAME = '" . $table . "'");
+                $statement = self::$connect[$database]->prepare("SELECT
+                COLUMNINFO.COLUMN_NAME AS Field,
+                COLUMNINFO.DATA_TYPE AS Type,
+                COLUMNINFO.IS_NULLABLE AS [Null],
+                (SELECT 'PRI' FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE as COLUMNUSAGE WHERE COLUMNUSAGE.COLUMN_NAME = COLUMNINFO.COLUMN_NAME AND OBJECTPROPERTY(OBJECT_ID(CONSTRAINT_SCHEMA + '.' + CONSTRAINT_NAME), 'IsPrimaryKey') = 1 AND COLUMNUSAGE.TABLE_NAME = '{$table}') as [Key] FROM INFORMATION_SCHEMA.COLUMNS as COLUMNINFO WHERE COLUMNINFO.TABLE_NAME = '{$table}'");
             }  
+           
+            $statement->execute();
+            $coluns = $statement->fetchAll(\PDO::FETCH_ASSOC);
 
-            if(isset($statement) && $statement instanceof \PDOStatement){
-                $statement->execute();
-                $coluns = $statement->fetchAll(\PDO::FETCH_ASSOC);
-
-                foreach($coluns as $item){ 
-                    $arrReturn[] = $item['Field'];
-                }
-                
-                if(extension_loaded('apcu') && (isset(\PSF::getConfig()->settings['savedbcache']) && \PSF::getConfig()->settings['savedbcache'] == TRUE)){
-                    apcu_store($stringCache, $arrReturn, 604800);
-                }
-
-                return $arrReturn ?? [];
+            foreach($coluns as $item){ 
+                $arrReturn[] = (object) $item;
             }
+            
+            if(extension_loaded('apcu') && $saveCache){
+                apcu_store($stringCache, $arrReturn, 604800);
+            }
+
+            return $arrReturn;
         }catch (\PDOException $e){
-            explodeException($e); 
+            throw new \Exception("Unable to retrieve fields from database table");
         }
     }
 

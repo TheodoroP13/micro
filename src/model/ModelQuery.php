@@ -64,7 +64,7 @@ class ModelQuery{
     }
 
     private function getAcceptComparativeOperators() : array{
-        return ["=", "<>", "IS NULL", "IS NOT NULL", "LIKE"];
+        return ['=', '<>', '>', '<', 'IS NULL', 'IS NOT NULL', 'LIKE'];
     }
 
     private function generateField($field){
@@ -210,30 +210,38 @@ class ModelQuery{
                     $stringFinal = "(";
                     $countItens = 0;
                     foreach($query[1] as $key => $value){
-                        if(count($value) == 1){
-                            $parse = uniqid();
-                            $this->query['parses'][$parse] = $value[array_keys($value)[0]];
-                            $stringFinal .= $this->generateField(array_keys($value)[0]) . " = :" . $parse;
-                            if($countItens < count($query[1]) - 1){
-                                $stringFinal .= " OR ";
-                            }
-                            $countItens++;
-                        }else if(count($value) == 3){
-                            if(in_array($value[1], $this->getAcceptComparativeOperators())){
-                                if($value[1] == "IS NULL" || $value[1] == "IS NOT NULL"){
-                                    $stringFinal .= $this->generateField($value[0]) . " " . $value[1];
-                                }else{
-                                    $parse = uniqid();
-                                    $this->query['parses'][$parse] = $value[2];
-                                    $stringFinal .= $this->generateField($value[0]) . " " . $value[1] . " :" . $parse;
-                                }
+                        if(is_array($value)){
+                            if(count($value) == 1){
+                                $parse = uniqid();
+                                $this->query['parses'][$parse] = $value[array_keys($value)[0]];
+                                $stringFinal .= $this->generateField(array_keys($value)[0]) . " = :" . $parse;
                                 if($countItens < count($query[1]) - 1){
                                     $stringFinal .= " OR ";
                                 }
                                 $countItens++;
-                            }else{
-                                //Estourar erro
+                            }else if(count($value) == 3){
+                                if(in_array($value[1], $this->getAcceptComparativeOperators())){
+                                    if($value[1] == "IS NULL" || $value[1] == "IS NOT NULL"){
+                                        $stringFinal .= $this->generateField($value[0]) . " " . $value[1];
+                                    }else{
+                                        $parse = uniqid();
+                                        $this->query['parses'][$parse] = $value[2];
+                                        $stringFinal .= $this->generateField($value[0]) . " " . $value[1] . " :" . $parse;
+                                    }
+                                    if($countItens < count($query[1]) - 1){
+                                        $stringFinal .= " OR ";
+                                    }
+                                    $countItens++;
+                                }else{
+                                    //Estourar erro
+                                }
                             }
+                        }else{
+                            $stringFinal .= $value;
+                            if($countItens < count($query[1]) - 1){
+                                $stringFinal .= " OR ";
+                            }
+                            $countItens++;
                         }
                     }
                     $stringFinal .= ")";
@@ -694,7 +702,7 @@ class ModelQuery{
 
     private function queryResult($Read) : object|bool|array|int {
         if($this->query['isCount'] === true){ 
-            return $Read->getResult()[0]['qtd'];
+            return $Read->getResult()[0]['qtd'] ?? 0;
         }
 
         if($Read->getRowCount() == 0){
@@ -708,7 +716,9 @@ class ModelQuery{
                 $class = $this->obj::class;
                 $newObj = new $class;
                 $newObj->assign($Read->getResult()[0], true);
-                $newObj->assign(["cache" => (object) $Read->getResult()[0]]);
+                if(property_exists($this->obj, 'saveCache') && $this->obj->saveCache){
+                    $newObj->assign(["cache" => (object) $Read->getResult()[0]]);
+                }
                 $newObj->database = !empty($this->query['database']) ? $this->query['database'] : 'default';
                 return $newObj;
             }
@@ -721,7 +731,9 @@ class ModelQuery{
                 foreach($Read->getResult() as $item){
                     $newObj = new $class;
                     $newObj->assign($item, true);
-                    $newObj->assign(["cache" => (object) $item]);
+                    if(property_exists($this->obj, 'saveCache') && $this->obj->saveCache){
+                        $newObj->assign(["cache" => (object) $item]);
+                    }
                     $newObj->database = !empty($this->query['database']) ? $this->query['database'] : 'default';
                     $return[] = $newObj;
                 }

@@ -22,14 +22,14 @@ class JWT{
         $header_payload = static::base64urlEncode($header) . '.'. 
                         static::base64urlEncode($payload);
  
-        $signature = hash_hmac('sha256', $header_payload, \PGF::getConfig()->jwt['secret'], true);
+        $signature = hash_hmac('sha256', $header_payload, \PSF::getConfig()->jwt['secret'], true);
 
         return static::base64urlEncode($header) . '.' .
         static::base64urlEncode($payload) . '.' .
         static::base64urlEncode($signature);
     }
  
-    public static function decode(string $token){
+    public static function decode(string $token, bool $valid){
         $token = explode('.', $token);
         $header = static::base64urlDescode($token[0]);
         $payload = static::base64urlDescode($token[1]);
@@ -38,8 +38,10 @@ class JWT{
  
         $header_payload = $token[0] . '.' . $token[1];
  
-        if(hash_hmac('sha256', $header_payload, \PGF::getConfig()->jwt['secret'], true) !== $signature){
-            return false;
+        if($valid){
+            if(hash_hmac('sha256', $header_payload, \PSF::getConfig()->jwt['secret'], true) !== $signature){
+                return false;
+            }
         }
         return json_decode($payload, true);
     }

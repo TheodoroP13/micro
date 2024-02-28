@@ -12,103 +12,65 @@ use \Prospera\Enumerators\{DBDriver};
 class Model{
 	public $tableName;
 	public $database = 'default';
-	public $cache;
 
 	public function __construct(){
-		if(is_callable([$this, 'onConstruct'])){
+		if(method_exists($this, 'onConstruct') && is_callable([$this, 'onConstruct'])){
 			call_user_func([$this, 'onConstruct']);
 		}
-		if(!empty($this->tableName)){
+
+		if(empty($this->tableName)){
+			unset($this->database);
+			unset($this->cache);
+			unset($this->tableName);
+		}else{
 			$listColuns = $this->getColunsForTable();
+
 			foreach($listColuns as $colun){
-				$this->{$colun} = null;
+				$this->{$colun->Field} = null;
 			}
+		}
+
+		if(property_exists($this, 'saveCache') && $this->saveCache === TRUE){
+			$this->{'cache'} = [];
 		}
 	}
 
 	public function getPrimarysKeys(){
-		// var_dump($this->database);
-		$configDb 	= \PSF::getConfig()->db;
-		$driver 	= !empty($configDb[$this->database]['driver']) ? $configDb[$this->database]['driver'] : DBDriver::MySQL;
-
-		$db = Connect::getConnection($this->database);
-
-		if($driver == DBDriver::MySQL){
-			$query = "SHOW KEYS FROM " . ModelQuery::getHandleTableName($this->database, $this->tableName) . " WHERE Key_name = 'PRIMARY'";
-		}
-
-		if($driver == DBDriver::SQLServer){
-			$query = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE OBJECTPROPERTY(OBJECT_ID(CONSTRAINT_SCHEMA + '.' + CONSTRAINT_NAME), 'IsPrimaryKey') = 1 AND TABLE_NAME = '" . $this->tableName . "'";
-		}
-
-		// var_dump($query);
-
-		if(isset($query)){
-			$statement = $db->prepare($query);
-
-			try{    
-	            $statement->execute();
-	            $coluns = $statement->fetchAll(\PDO::FETCH_ASSOC);
-
-	            // var_dump($coluns);
-
-	            return $coluns;
-	        }catch (\PDOException $e){
-	            explodeException($e); 
-	            return false;
-	        }
-		}
-
-		return FALSE;
+		return array_map(function($item){
+			return $item->Field;
+		}, array_filter($this->getColunsForTable(), function($item){
+			return $item->Key === 'PRI';
+		}));
 	}
 
 	public function getPrimarysQuery(){
-		$configDb 	= \PSF::getConfig()->db;
-		$driver 	= !empty($configDb[$this->database]['driver']) ? $configDb[$this->database]['driver'] : DBDriver::MySQL;
+		$configDb 	= \PSF::getConfig()->db[$this->database];
+		$driver 	= !empty($configDb['driver']) ? $configDb['driver'] : DBDriver::MySQL;
 
 		$primarys = $this->getPrimarysKeys();
 
-		if($driver == DBDriver::MySQL){
-	       	if(count($primarys) == 1){
-	       		return "`".$primarys[0]['Table']."`.`".$primarys[0]['Column_name']."` = ".$this->{$primarys[0]['Column_name']};
-	       	}else if(count($primarys) > 1){
-	       		$string = "";
-	       		$count = 0;
+       	if(count($primarys) == 1){
+       		return $driver === DBDriver::MySQL ? ("`".$this->table."`.`".$primarys[0]."` = ".$this->{$primarys[0]}) : ($driver === DBDriver::SQLServer ? ($primarys[0]." = ".$this->{$primarys[0]}) : []);
+       	}else if(count($primarys) > 1){
+       		$string = "";
+       		$count = 0;
 
-	       		foreach($primarys as $item){
-	       			if($count > 0){
-	       				$string .= " AND ";
-	       			}
-	       			$string .= " `" . $item['Table'] ."`.`". $item['Column_name'] . "` = " . $this->{$item['Column_name']};
-	       			$count++;
-	       		}
+       		foreach($primarys as $item){
+       			if($count > 0){
+       				$string .= " AND ";
+       			}
+       			if($driver === DBDriver::MySQL){
+       				$string .= " `" . $this->table ."`.`". $item . "` = " . $this->{$item};
+       			}else if($driver === DBDriver::SQLServer){
+       				$string .= " " . $item . " = " . $this->{$item};
+       			}
+       			$count++;
+       		}
 
-	       		return $string;
-	       	}else{
-	       		throw new \Exception("MySql Error - Primary Key Not Found");
-	       	}
-	    }
-
-	    if($driver == DBDriver::SQLServer){
-	    	if(count($primarys) == 1){
-	       		return $primarys[0]['COLUMN_NAME']." = ".$this->{$primarys[0]['COLUMN_NAME']};
-	       	}else if(count($primarys) > 1){
-	       		$string = "";
-	       		$count = 0;
-
-	       		foreach($primarys as $item){
-	       			if($count > 0){
-	       				$string .= " AND ";
-	       			}
-	       			$string .= " " . $item['COLUMN_NAME'] . " = " . $this->{$item['COLUMN_NAME']};
-	       			$count++;
-	       		}
-
-	       		return $string;
-	       	}else{
-	       		throw new \Exception("SQLServer Error - Primary Key Not Found");
-	       	}
-	    }
+       		return $string;
+       	}else{
+       		throw new \Exception("DB Error - Primary Key Not Found");
+       	}
 	}
 
 	public function getColunsForTable(){
@@ -116,6 +78,9 @@ class Model{
 	}
 
 	public function create(){
+		$configDb 	= \PSF::getConfig()->db;
+		$driver 	= !empty($configDb[$this->database]['driver']) ? $configDb[$this->database]['driver'] : DBDriver::MySQL;
+		
 		if(property_exists($this, "incluido")){
 			$this->incluido = date("Y-m-d H:i:s");
 		}
@@ -127,17 +92,25 @@ class Model{
 		}
 
 		$fields = [];
-		foreach($this->getColunsForTable() as $item){
-			if(property_exists($this, $item) && !empty($this->$item)){
+		$columns = array_map(function($item){
+			return $item->Field;
+		}, $this->getColunsForTable());
+
+		foreach($columns as $item){
+			if(property_exists($this, $item)){
 				$fields[$item] = $this->{$item};
 			}
+		}
+
+		if($driver == DBDriver::SQLServer){
+			unset($fields[$this->getIdentityColumn()]);
 		}
 		
 		$Create = Create::exe($this->tableName, $fields, $this->database);
 		if($Create->getResult() !== FALSE){
 			$this->id = $Create->getResult();
 
-			if(!isset($this->cache) || empty($this->cache)){
+			if(property_exists($this, 'saveCache') && $this->saveCache && !isset($this->cache) || empty($this->cache)){
 				$this->cache = clone $this;
 			}
 
@@ -151,40 +124,21 @@ class Model{
 		$configDb 	= \PSF::getConfig()->db;
 		$driver 	= !empty($configDb[$this->database]['driver']) ? $configDb[$this->database]['driver'] : DBDriver::MySQL;
 
-		if(empty($this->cache)){
-			$trace = debug_backtrace();
-
-			Http::response('You can only use the "save" method with existing records, for new records use the "create" method', [
-	            'class' 	=> $this::class,
-	            'callIn'	=> $trace[0]['file'] . ' on line ' . $trace[0]['line'],
-	        ], 500);
-		}
-			
-		$fieldsChanged = [];
-		$lastData = [];
-		$newData = [];
-
 		if(property_exists($this, "alterado")){
 			if(property_exists($this, "deletado") && empty($this->deletado)){
-				$this->updated = date("Y-m-d H:i:s");
+				$this->alterado = date("Y-m-d H:i:s");
 			}else if(!property_exists($this, "deletado")){
-				$this->updated = date("Y-m-d H:i:s");
+				$this->alterado = date("Y-m-d H:i:s");
 			}
 		}
 
 		$fields = [];
-		foreach($this->getColunsForTable() as $item){
+		$columns = array_map(function($item){
+			return $item->Field;
+		}, $this->getColunsForTable());
+
+		foreach($columns as $item){
 			$fields[$item] = $this->{$item};
-			if(!empty($this->cache)){
-				if($this->{$item} != $this->cache->{$item}){
-					$lastData[$item] = $this->cache->{$item};
-					$newData[$item] = $this->{$item};
-					$fieldsChanged[] = $item;
-				}
-			}else{
-				$newData[$item] = $this->{$item};
-				$fieldsChanged[] = $item;
-			}
 		}
 
 		if($driver == DBDriver::SQLServer){
@@ -192,17 +146,6 @@ class Model{
 		}
 
 		$Update = Update::exe($this->tableName, $fields, "WHERE " . $this->getPrimarysQuery(), null, $this->database);
-
-		if($Update->getResult() == true){
-			Connect::getConnection($this->database);
-
-			$auditTables = \PSF::getConfig()->pgf['audittables'] ?? false;
-			if($auditTables && is_callable([$auditTables[0], $auditTables[1]])){
-				$primarys = $this->getPrimarysKeys();
-
-				call_user_func_array([$auditTables[0], $auditTables[1]], [$last, $new, $primarys]);
-			}	
-		}
 
 		return $Update->getResult();
 	}

@@ -42,7 +42,7 @@ class Request{
 	public function headers(array $headers) : Request{
 		if(!empty($headers)){
 			foreach ($headers as $key => $value) {
-				$this->settings['headers'][] = $key . ":" . $value;
+				$this->settings['headers'][] = $key . ": " . $value;
 			}
 		}
 
