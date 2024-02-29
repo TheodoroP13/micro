@@ -36,11 +36,11 @@ class Model{
 	}
 
 	public function getPrimarysKeys(){
-		return array_map(function($item){
+		return array_values(array_map(function($item){
 			return $item->Field;
 		}, array_filter($this->getColunsForTable(), function($item){
 			return $item->Key === 'PRI';
-		}));
+		})));
 	}
 
 	public function getPrimarysQuery(){
