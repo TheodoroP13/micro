@@ -1,6 +1,6 @@
 <?php
 
-namespace Pgf\Helpers;
+namespace Prospera\Helper;
 
 class Device{
 	public static function getInfo(string|null $agentDescription = null) : array{

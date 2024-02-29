@@ -1,6 +1,6 @@
 <?php
 
-namespace Pgf\Helpers;
+namespace Prospera\Helper;
 
 class TimeZone{
     public static function getAllTimeZones($filter, $other = NULL) {
