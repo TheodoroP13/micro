@@ -118,6 +118,33 @@ class Router{
 		return $url;
 	}
 
+	private function saveLoggin(string $url, array $route, array $response = []){
+		$middlewares = isset($route['attributes']['arguments']['middlewares']) && is_array($route['attributes']['arguments']['middlewares']) ? $route['attributes']['arguments']['middlewares'] : [];
+
+		if(in_array('loggin', $middlewares) && !in_array('webview', $middlewares)){
+			$logRequest = \PSF::getConfig()->settings['logrequest'] ?? FALSE;
+			if(!empty($logRequest) && $logRequest != FALSE){
+				$logObj = new $logRequest[0];
+				if(is_callable([$logObj, $logRequest[1]])){
+					call_user_func_array([$logObj, $logRequest[1]], [
+						'endpoint'	=> $url,
+						'version'	=> $route['attributes']['arguments']['version'],
+						'method'	=> $route['attributes']['arguments']['method'],
+						'body'		=> $this->getBody(),
+						'headers'	=> apache_request_headers() ?? [], 
+						'response' 	=> isset($response[1]) && !empty($response[1]) ? [
+							'message' 	=> $response[0],
+							'data'		=> $response[1],
+						] : [
+							'message' => $response[0]
+						],
+						'httpCode' 	=> $response[2] ?? StatusCode::OK,
+					]);
+				}
+			}
+		}
+	}
+
 	private function callMethodRoute(){
 		$urlFind = self::clearUrl($_GET['_url']);
 
@@ -182,9 +209,9 @@ class Router{
 			$filterMetch = (reset($filterMetch));
 
 			if(is_callable([new $filterMetch['class'], $filterMetch['name']])){
-				if(isset($filterMetch['attributes']['arguments']['middlewares']) 
-					&& is_array($filterMetch['attributes']['arguments']['middlewares']) 
-					&& in_array('authentication', $filterMetch['attributes']['arguments']['middlewares'])){
+				$middlewares = isset($filterMetch['attributes']['arguments']['middlewares']) && is_array($filterMetch['attributes']['arguments']['middlewares']) ? $filterMetch['attributes']['arguments']['middlewares'] : [];
+
+				if(in_array('authentication', $middlewares)){
 					$verifyAuth = \PSF::getConfig()->settings['verifyauth'] ?? FALSE;
 
 					if(!empty($verifyAuth) && $verifyAuth !== FALSE){
@@ -194,6 +221,9 @@ class Router{
 							if(is_object($doValid) || $doValid === TRUE){
 								self::$auth = $doValid;			
 							}else{
+								$return = ["Erro ao validar a autenticação", (is_bool($doValid) ? NULL : (is_array($doValid) ? $doValid : ['msg' => $doValid])), StatusCode::UNAUTHORIZED];
+								$this->saveLoggin($urlFind, $filterMetch, $return);
+
 								Http::response("Erro ao validar a autenticação", (is_bool($doValid) ? NULL : (is_array($doValid) ? $doValid : ['msg' => $doValid])), StatusCode::UNAUTHORIZED);
 								throw new \Exception(StatusCode::UNAUTHORIZED);
 							}
@@ -207,45 +237,9 @@ class Router{
 
 				try{
 					$return = call_user_func_array([new $filterMetch['class'], $filterMetch['name']], $this->fields);
-
-					if(isset($filterMetch['attributes']['arguments']['middlewares']) && is_array($filterMetch['attributes']['arguments']['middlewares']) && in_array('loggin', $filterMetch['attributes']['arguments']['middlewares']) && !in_array('webview', $filterMetch['attributes']['arguments']['middlewares'])){
-						$logRequest = \PSF::getConfig()->settings['logrequest'] ?? FALSE;
-						if(!empty($logRequest) && $logRequest != FALSE){
-							$logObj = new $logRequest[0];
-							if(is_callable([$logObj, $logRequest[1]])){
-								call_user_func_array([$logObj, $logRequest[1]], [
-									'endpoint'	=> $urlFind, 
-									'body'		=> $this->getBody(), 
-									'headers'	=> apache_request_headers() ?? [], 
-									'response' 	=> $return[1] ?? $return, 
-									'httpCode' 	=> $return[2] ?? NULL
-								]);
-							}
-						}
-					}
-
+					$this->saveLoggin($urlFind, $filterMetch, $return);
 					return $return;
-				}catch (Exception $e) {
-					try {
-						if(isset($filterMetch['attributes']['arguments']['middlewares']) && is_array($filterMetch['attributes']['arguments']['middlewares']) && in_array('loggin', $filterMetch['attributes']['arguments']['middlewares']) && !in_array('webview', $filterMetch['attributes']['arguments']['middlewares'])){
-							$logRequest = \PSF::getConfig()->settings['logrequest'] ?? FALSE;
-							if(!empty($logRequest) && $logRequest != FALSE){
-								$logObj = new $logRequest[0];
-								if(is_callable([$logObj, $logRequest[1]])){
-									call_user_func_array([$logObj, $logRequest[1]], [
-										'endpoint'	=> $urlFind, 
-										'body'		=> $this->getBody(), 
-										'headers'	=> apache_request_headers() ?? [], 
-										// 'response' 	=> $return[1] ?? $return, 
-										// 'httpCode' 	=> $return[2] ?? NULL
-									]);
-								}
-							}
-						}
-					} catch (Exception $e2) {
-						
-					}
-					
+				}catch (Exception $e) {					
 					throw new \Exception(StatusCode::NOT_FOUND);
 				}
 			}

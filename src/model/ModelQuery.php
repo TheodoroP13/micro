@@ -850,7 +850,7 @@ class ModelQuery{
         $this->query['asArray']     = TRUE;
         $executeSelect = $this->execute();
 
-        if($executeSelect && $executeSelect['1'] === 1){
+        if($executeSelect && !empty($executeSelect)){
             return TRUE;
         }
 
