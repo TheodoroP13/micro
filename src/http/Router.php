@@ -118,7 +118,7 @@ class Router{
 		return $url;
 	}
 
-	private function saveLoggin(string $url, array $route, array $response = []){
+	private function saveLoggin(string $url, array $route, null|array $response = []){
 		$middlewares = isset($route['attributes']['arguments']['middlewares']) && is_array($route['attributes']['arguments']['middlewares']) ? $route['attributes']['arguments']['middlewares'] : [];
 
 		if(in_array('loggin', $middlewares) && !in_array('webview', $middlewares)){

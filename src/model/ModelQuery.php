@@ -68,8 +68,6 @@ class ModelQuery{
     }
 
     private function generateField($field){
-        // var_dump($field);
-
         $configDb = \PSF::getConfig()->db;
         $driver = !empty($configDb[$this->query['database']]['driver']) ? $configDb[$this->query['database']]['driver'] : DBDriver::MySQL;
 
@@ -88,14 +86,14 @@ class ModelQuery{
             }
 
             return $tableName . "." . $field[1];            
-        }else{
+        }else if(is_string($field)){
             if(isset($this->obj->tableName) && !empty($this->obj->tableName) && !in_array(substr($field, 0, 5), $arrIgnoreRules) && !in_array(substr($field, 0, 3), $arrIgnoreRules)){
                 $explodeField = explode(".", $field);
 
                 if(count($explodeField) == 2){
                     if(class_exists($explodeField[0])){
                         if($driver == DBDriver::MySQL){
-                            $field = '`' . (new $explodeField[0])->getTableName() . '`.`' . ($this->handleAliasField($explodeField[1])) . '`';
+                            $field = '`' . (new $explodeField[0])->getTableName() . '`' . ($this->handleAliasField($explodeField[1]));
                         }
 
                         if($driver == DBDriver::SQLServer){
@@ -127,10 +125,12 @@ class ModelQuery{
 
                     return $this->obj->tableName . "." . $field;
                 }
-            }else{
-                return $field;
             }
+        }else if(is_object($field) && isset($field->Field)){    
+            return $field->Field;
         }
+
+        return $field;
     }
 
     private function handleAliasField(string $field) : string{
@@ -753,6 +753,7 @@ class ModelQuery{
         $countTotal->query['limit'] = NULL;
         $countTotal->query['offset'] = NULL;
         $countTotal->query['order'] = NULL;
+        $countTotal->query['groupBy'] = NULL;
 
         // var_dump($countTotal->getRowQuery());
 

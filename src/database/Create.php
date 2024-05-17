@@ -11,7 +11,7 @@ class Create extends Connect{
     private $create;
     private $connection;
     private $database;
-    
+
     public static function exe($table, array $data, $database = 'default'){
         $configDb = \PSF::getConfig()->db;
 

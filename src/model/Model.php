@@ -50,7 +50,7 @@ class Model{
 		$primarys = $this->getPrimarysKeys();
 
        	if(count($primarys) == 1){
-       		return $driver === DBDriver::MySQL ? ("`".$this->table."`.`".$primarys[0]."` = ".$this->{$primarys[0]}) : ($driver === DBDriver::SQLServer ? ($primarys[0]." = ".$this->{$primarys[0]}) : []);
+       		return $driver === DBDriver::MySQL ? ("`".$this->tableName."`.`".$primarys[0]."` = ".$this->{$primarys[0]}) : ($driver === DBDriver::SQLServer ? ($primarys[0]." = ".$this->{$primarys[0]}) : []);
        	}else if(count($primarys) > 1){
        		$string = "";
        		$count = 0;
@@ -60,7 +60,7 @@ class Model{
        				$string .= " AND ";
        			}
        			if($driver === DBDriver::MySQL){
-       				$string .= " `" . $this->table ."`.`". $item . "` = " . $this->{$item};
+       				$string .= " `" . $this->tableName ."`.`". $item . "` = " . $this->{$item};
        			}else if($driver === DBDriver::SQLServer){
        				$string .= " " . $item . " = " . $this->{$item};
        			}
@@ -184,13 +184,13 @@ class Model{
 	}
 
 	public function toArray() : array {
-		$arrReturn = [];
-		foreach($this->getColunsForTable() as $item){	
-			if(property_exists($this, $item)){
-				$arrReturn[$item] = $this->$item;
+		foreach($this->getColunsForTable() as $item){
+			if(property_exists($this, $item->Field)){
+				$fieldName = $item->Field;
+				$arrReturn[$item->Field] = $this->$fieldName;
 			}
 		}		
-		return $arrReturn;
+		return $arrReturn ?? [];
 	}
 
 	public function getTableName(){
