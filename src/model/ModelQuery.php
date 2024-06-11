@@ -7,6 +7,7 @@ use \Prospera\Enumerators\{DBDriver};
 class ModelQuery{
     private $obj;
     private $query;
+    private $configDb;
 
     public function __construct($class){
         $this->obj = new $class;
@@ -27,6 +28,8 @@ class ModelQuery{
             'asArray'       => FALSE,
             'database'      => $this->obj->database ?? 'default'
         ];
+
+        $this->configDb = \PSF::getConfig()->db[$this->obj->database]; 
     }
 
     private function getDatabaseName() : string{
@@ -34,9 +37,8 @@ class ModelQuery{
     }
 
     private function handleTableName() : string{
-        $configDb = \PSF::getConfig()->db;
-        $driver = !empty($configDb[$this->query['database']]['driver']) ? $configDb[$this->query['database']]['driver'] : DBDriver::MySQL;
-
+        $driver = !empty($this->configDb['driver']) ? $this->configDb['driver'] : DBDriver::MySQL;
+        
         if($driver == DBDriver::MySQL){
             return '`' . $this->getDatabaseName() . '`.`' . $this->obj->tableName . '`';
         }
@@ -68,9 +70,7 @@ class ModelQuery{
     }
 
     private function generateField($field){
-        $configDb = \PSF::getConfig()->db;
-        $driver = !empty($configDb[$this->query['database']]['driver']) ? $configDb[$this->query['database']]['driver'] : DBDriver::MySQL;
-
+        $driver = !empty($this->configDb['driver']) ? $this->configDb['driver'] : DBDriver::MySQL;
         $arrIgnoreRules = ['SUM', 'COUNT', 'MAX'];
 
         if(is_array($field)){
@@ -134,8 +134,7 @@ class ModelQuery{
     }
 
     private function handleAliasField(string $field) : string{
-        $configDb = \PSF::getConfig()->db;
-        $driver = !empty($configDb[$this->query['database']]['driver']) ? $configDb[$this->query['database']]['driver'] : DBDriver::MySQL;
+        $driver = !empty($this->configDb['driver']) ? $this->configDb['driver'] : DBDriver::MySQL;
 
         $explodeAs = explode(' ', $field);
 
@@ -470,12 +469,20 @@ class ModelQuery{
     }
 
     public function execute(){
-        if(property_exists($this->obj, "status")){
-            $this->andWhere([$this->obj::class . '.status', '<>' , -1]);
+        if(isset($this->configDb['fields']['status']) && !empty($this->configDb['fields']['status']) && property_exists($this->obj, $this->configDb['fields']['status'])){
+            $this->andWhere([$this->obj::class . '.' . $this->configDb['fields']['status'], '<>' , -1]);
+        }else{
+            if(property_exists($this->obj, "status")){
+                $this->andWhere([$this->obj::class . '.status', '<>' , -1]);
+            }
         }
 
-        if(property_exists($this->obj, "deletado")){
-            $this->andWhere([$this->obj::class . '.deletado', 'IS NULL', NULL]);
+        if(isset($this->configDb['fields']['deletado']) && !empty($this->configDb['fields']['deletado']) && property_exists($this->obj, $this->configDb['fields']['deletado'])){
+            $this->andWhere([$this->obj::class . '.' . $this->configDb['fields']['deletado'], 'IS NULL', NULL]);
+        }else{
+            if(property_exists($this->obj, 'deletado')){
+                $this->andWhere([$this->obj::class . '.deletado', 'IS NULL', NULL]);
+            }
         }
 
         $Read = new \Prospera\Database\Read($this->obj->databaseConnect ?? null);
@@ -490,8 +497,7 @@ class ModelQuery{
     }
 
     private function writeQuery() : string{
-        $configDb = \PSF::getConfig()->db;
-        $driver = !empty($configDb[$this->query['database']]['driver']) ? $configDb[$this->query['database']]['driver'] : DBDriver::MySQL;
+        $driver = !empty($this->configDb['driver']) ? $this->configDb['driver'] : DBDriver::MySQL;
 
         $stringQuery = "SELECT ";
 
@@ -499,7 +505,7 @@ class ModelQuery{
             if(isset($this->query['limit']) && !empty($this->query['limit']) && $this->query['offset'] === NULL){
                 $stringQuery .= " TOP " . $this->query['limit'] . ' ';
             }
-        }  
+        } 
 
         if($driver == DBDriver::SQLServer && (isset($this->query['offset']) && $this->query['offset'] !== NULL) && (isset($this->query['limit']) && $this->query['limit'] !== NULL)){
 
@@ -659,12 +665,20 @@ class ModelQuery{
     }
 
     public function getRowQuery() : string {
-        if(property_exists($this->obj, 'status')){
-            $this->andWhere([$this->obj::class . '.status', '<>' , -1]);
+        if(isset($this->configDb['fields']['status']) && !empty($this->configDb['fields']['status']) && property_exists($this->obj, $this->configDb['fields']['status'])){
+            $this->andWhere([$this->obj::class . '.' . $this->configDb['fields']['status'], '<>' , -1]);
+        }else{
+            if(property_exists($this->obj, "status")){
+                $this->andWhere([$this->obj::class . '.status', '<>' , -1]);
+            }
         }
 
-        if(property_exists($this->obj, "deletado")){
-            $this->andWhere($this->obj->tableName . '.[deletado] IS NULL');
+        if(isset($this->configDb['fields']['deletado']) && !empty($this->configDb['fields']['deletado']) && property_exists($this->obj, $this->configDb['fields']['deletado'])){
+            $this->andWhere([$this->obj::class . '.' . $this->configDb['fields']['deletado'], 'IS NULL', NULL]);
+        }else{
+            if(property_exists($this->obj, 'deletado')){
+                $this->andWhere([$this->obj::class . '.deletado', 'IS NULL', NULL]);
+            }
         }
 
         $query = $this->writeQuery();

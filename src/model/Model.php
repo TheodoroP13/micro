@@ -10,6 +10,7 @@ use \Prospera\Http\Http;
 use \Prospera\Enumerators\{DBDriver};
 
 class Model{
+	public $table;
 	public $tableName;
 	public $database = 'default';
 
@@ -18,10 +19,15 @@ class Model{
 			call_user_func([$this, 'onConstruct']);
 		}
 
-		if(empty($this->tableName)){
+		if(!isset($this->table) && !empty($this->tableName)){
+			$this->table = $this->tableName;
+			unset($this->tableName);
+		}
+
+		if(empty($this->table)){
 			unset($this->database);
 			unset($this->cache);
-			unset($this->tableName);
+			unset($this->table);
 		}else{
 			$listColuns = $this->getColunsForTable();
 
@@ -50,7 +56,7 @@ class Model{
 		$primarys = $this->getPrimarysKeys();
 
        	if(count($primarys) == 1){
-       		return $driver === DBDriver::MySQL ? ("`".$this->tableName."`.`".$primarys[0]."` = ".$this->{$primarys[0]}) : ($driver === DBDriver::SQLServer ? ($primarys[0]." = ".$this->{$primarys[0]}) : []);
+       		return $driver === DBDriver::MySQL ? ("`".$this->table."`.`".$primarys[0]."` = ".$this->{$primarys[0]}) : ($driver === DBDriver::SQLServer ? ($primarys[0]." = ".$this->{$primarys[0]}) : []);
        	}else if(count($primarys) > 1){
        		$string = "";
        		$count = 0;
@@ -60,7 +66,7 @@ class Model{
        				$string .= " AND ";
        			}
        			if($driver === DBDriver::MySQL){
-       				$string .= " `" . $this->tableName ."`.`". $item . "` = " . $this->{$item};
+       				$string .= " `" . $this->table ."`.`". $item . "` = " . $this->{$item};
        			}else if($driver === DBDriver::SQLServer){
        				$string .= " " . $item . " = " . $this->{$item};
        			}
@@ -74,23 +80,43 @@ class Model{
 	}
 
 	public function getColunsForTable(){
-		return Connect::getColunsForTable($this->tableName, $this->database);
+		return Connect::getColunsForTable($this->table, $this->database);
 	}
 
 	public function create(){
-		$configDb 	= \PSF::getConfig()->db;
-		$driver 	= !empty($configDb[$this->database]['driver']) ? $configDb[$this->database]['driver'] : DBDriver::MySQL;
+		$configDb 	= \PSF::getConfig()->db[$this->database];
+		$driver 	= !empty($configDb['driver']) ? $configDb['driver'] : DBDriver::MySQL;
 		
-		if(property_exists($this, "incluido")){
-			$this->incluido = date("Y-m-d H:i:s");
-		}
-		if(property_exists($this, "hash") && empty($this->hash)){
-			$this->hash = UUID::generate(4);
-		}
-		if(property_exists($this, "status") && empty($this->status)){
-			$this->status = 1;
+		if(isset($this->configDb['fields']['incluido']) && !empty(isset($this->configDb['fields']['incluido']))){
+			if(property_exists($this, $this->configDb['fields']['incluido'])){
+				$this->{$this->configDb['fields']['incluido']} = date("Y-m-d H:i:s");
+			}
+		}else{
+			if(property_exists($this, "incluido")){
+				$this->incluido = date("Y-m-d H:i:s");
+			}
 		}
 
+		if(isset($this->configDb['fields']['hash']) && !empty(isset($this->configDb['fields']['hash']))){
+			if(property_exists($this, $this->configDb['fields']['hash'])){
+				$this->{$this->configDb['fields']['hash']} = $this->hash = UUID::generate(4);
+			}
+		}else{
+			if(property_exists($this, "hash") && empty($this->hash)){
+				$this->hash = UUID::generate(4);
+			}
+		}
+
+		if(isset($this->configDb['fields']['status']) && !empty(isset($this->configDb['fields']['status']))){
+			if(property_exists($this, $this->configDb['fields']['status'])){
+				$this->{$this->configDb['fields']['status']} = 1;
+			}
+		}else{
+			if(property_exists($this, "status") && empty($this->status)){
+				$this->status = 1;
+			}
+		}
+		
 		$fields = [];
 		$columns = array_map(function($item){
 			return $item->Field;
@@ -106,7 +132,7 @@ class Model{
 			unset($fields[$this->getIdentityColumn()]);
 		}
 		
-		$Create = Create::exe($this->tableName, $fields, $this->database);
+		$Create = Create::exe($this->table, $fields, $this->database);
 		if($Create->getResult() !== FALSE){
 			$this->id = $Create->getResult();
 
@@ -121,14 +147,16 @@ class Model{
 	}
 
 	public function save(){
-		$configDb 	= \PSF::getConfig()->db;
-		$driver 	= !empty($configDb[$this->database]['driver']) ? $configDb[$this->database]['driver'] : DBDriver::MySQL;
+		$configDb 	= \PSF::getConfig()->db[$this->database];
+		$driver 	= !empty($configDb['driver']) ? $configDb['driver'] : DBDriver::MySQL;
 
-		if(property_exists($this, "alterado")){
-			if(property_exists($this, "deletado") && empty($this->deletado)){
-				$this->alterado = date("Y-m-d H:i:s");
-			}else if(!property_exists($this, "deletado")){
-				$this->alterado = date("Y-m-d H:i:s");
+		$propertyChange = isset($this->configDb['fields']['alterado']) && !empty(isset($this->configDb['fields']['alterado'])) ? $this->configDb['fields']['alterado'] : (property_exists($this, 'alterado') ? 'alterado' : NULL);
+
+		if(!empty($propertyChange)){
+			$propertyDeleted = isset($this->configDb['fields']['deletado']) && !empty(isset($this->configDb['fields']['deletado'])) ? $this->configDb['fields']['deletado'] : (property_exists($this, 'deletado') ? 'deletado' : NULL);
+
+			if(!empty($propertyDeleted) && empty($this->{$propertyDeleted})){
+				$this->{$propertyChange} = date('Y-m-d H:i:s');
 			}
 		}
 
@@ -145,28 +173,45 @@ class Model{
 			unset($fields[$this->getIdentityColumn()]);
 		}
 
-		$Update = Update::exe($this->tableName, $fields, "WHERE " . $this->getPrimarysQuery(), null, $this->database);
+		$Update = Update::exe($this->table, $fields, "WHERE " . $this->getPrimarysQuery(), null, $this->database);
 
 		return $Update->getResult();
 	}
 
 	public function delete(){
+		$configDb 	= \PSF::getConfig()->db[$this->database];
 		$softDelete = false;
 
-		if(property_exists($this, "deletado")){
-			$this->deletado = date("Y-m-d H:i:s");
-			$softDelete = true;
-		}else{
-			if(property_exists($this, "status")){
-				$this->status = -1;
+		if(isset($this->configDb['fields']['deletado']) && !empty(isset($this->configDb['fields']['deletado']))){
+			if(property_exists($this, $this->configDb['fields']['deletado'])){
+				$this->{$this->configDb['fields']['deletado']} = date("Y-m-d H:i:s");
 				$softDelete = true;
+			}
+		}else{
+			if(property_exists($this, "deletado")){
+				$this->deletado = date("Y-m-d H:i:s");
+				$softDelete = true;
+			}
+		}
+
+		if(!$softDelete){
+			if(isset($this->configDb['fields']['status']) && !empty(isset($this->configDb['fields']['status']))){
+				if(property_exists($this, $this->configDb['fields']['status'])){
+					$this->{$this->configDb['fields']['status']} = date("Y-m-d H:i:s");
+					$softDelete = true;
+				}
+			}else{
+				if(property_exists($this, "status")){
+					$this->status = date("Y-m-d H:i:s");
+					$softDelete = true;
+				}
 			}
 		}
 
 		if($softDelete){
 			$this->save();
 		}else{
-			Delete::exe($this->tableName, "WHERE " . $this->getPrimarysQuery(), null, $this->database);
+			Delete::exe($this->table, "WHERE " . $this->getPrimarysQuery(), null, $this->database);
 		}
 	}
 
@@ -194,7 +239,7 @@ class Model{
 	}
 
 	public function getTableName(){
-		return $this->tableName;
+		return $this->table;
 	}
 
 	public function getIdentityColumn(){
@@ -206,7 +251,7 @@ class Model{
 		if($driver == DBDriver::SQLServer){
 			$query = "SELECT COLUMN_NAME
 			FROM INFORMATION_SCHEMA.COLUMNS
-			WHERE TABLE_NAME = '" . $this->tableName . "' AND COLUMNPROPERTY(OBJECT_ID(TABLE_SCHEMA + '.' + TABLE_NAME), COLUMN_NAME, 'IsIdentity') = 1";
+			WHERE TABLE_NAME = '" . $this->table . "' AND COLUMNPROPERTY(OBJECT_ID(TABLE_SCHEMA + '.' + TABLE_NAME), COLUMN_NAME, 'IsIdentity') = 1";
 		}
 
 		if(isset($query)){
