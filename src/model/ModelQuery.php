@@ -40,14 +40,14 @@ class ModelQuery{
         $driver = !empty($this->configDb['driver']) ? $this->configDb['driver'] : DBDriver::MySQL;
         
         if($driver == DBDriver::MySQL){
-            return '`' . $this->getDatabaseName() . '`.`' . $this->obj->tableName . '`';
+            return '`' . $this->getDatabaseName() . '`.`' . $this->obj->table . '`';
         }
 
         if($driver == DBDriver::SQLServer){
-            return '[' . $this->getDatabaseName() . '].[dbo].[' . $this->obj->tableName . ']';
+            return '[' . $this->getDatabaseName() . '].[dbo].[' . $this->obj->table . ']';
         }
 
-        return $this->getDatabaseName() . '.' . $this->obj->tableName;
+        return $this->getDatabaseName() . '.' . $this->obj->table;
     }
 
     public static function getHandleTableName(string $database = 'default', string $table) : string{
@@ -87,7 +87,7 @@ class ModelQuery{
 
             return $tableName . "." . $field[1];            
         }else if(is_string($field)){
-            if(isset($this->obj->tableName) && !empty($this->obj->tableName) && !in_array(substr($field, 0, 5), $arrIgnoreRules) && !in_array(substr($field, 0, 3), $arrIgnoreRules)){
+            if(isset($this->obj->table) && !empty($this->obj->table) && !in_array(substr($field, 0, 5), $arrIgnoreRules) && !in_array(substr($field, 0, 3), $arrIgnoreRules)){
                 $explodeField = explode(".", $field);
 
                 if(count($explodeField) == 2){
@@ -115,7 +115,7 @@ class ModelQuery{
                     return $field;
                 }else{
                     if($driver == DBDriver::MySQL){
-                        return $this->obj->tableName . ".`" . $field . "`";
+                        return $this->obj->table . ".`" . $field . "`";
                     }
 
                     if($driver == DBDriver::SQLServer){
@@ -123,7 +123,7 @@ class ModelQuery{
                         return "[" . $field . "]";
                     }
 
-                    return $this->obj->tableName . "." . $field;
+                    return $this->obj->table . "." . $field;
                 }
             }
         }else if(is_object($field) && isset($field->Field)){    
@@ -487,7 +487,7 @@ class ModelQuery{
 
         $Read = new \Prospera\Database\Read($this->obj->databaseConnect ?? null);
         $Read->exe(
-            $this->obj->tableName,
+            $this->obj->table,
             $this->writeQuery(),
             $this->getParses(),
             !empty($this->query['database']) ? $this->query['database'] : 'default',
@@ -541,11 +541,11 @@ class ModelQuery{
             if((isset($this->query['innerJoins']) && !empty($this->query['innerJoins'])) || (isset($this->query['leftJoins']) && !empty($this->query['leftJoins']))){
 
                 if($driver == DBDriver::MySQL){
-                    $fieldsQuery = '`' . $this->obj->tableName . '`.*';
+                    $fieldsQuery = '`' . $this->obj->table . '`.*';
                 }
 
                 if($driver == DBDriver::SQLServer){
-                    $fieldsQuery = '[' . $this->obj->tableName . '].*';
+                    $fieldsQuery = '[' . $this->obj->table . '].*';
                 }
             }else{
                 $fieldsQuery = '*';
@@ -849,7 +849,7 @@ class ModelQuery{
 
         $Read = new \Prospera\Database\Read($this->obj->databaseConnect ?? null);
         $Read->exe(
-            $this->obj->tableName,
+            $this->obj->table,
             $query,
             $stringParseString,
             $database,
