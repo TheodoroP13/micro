@@ -347,4 +347,25 @@ class Model{
 
 		return $response;
 	}
+
+	public static function getPropByColumn($class, $column){
+		$refClass = new \ReflectionClass($class);
+        $findPropertie = array_values(array_filter($refClass->getProperties(), function($item) use ($column){
+            return $column === $item->getName();
+        }));
+
+        if(!empty($findPropertie)){
+            $attributes = $findPropertie[0]->getAttributes();
+
+            $column = array_values(array_filter($attributes, function($attr){
+                return $attr->getName() === 'Column';
+            }));
+
+            if(!empty($column)){
+                return $column[0]->getArguments()[0];
+            }
+        }
+
+		return FALSE;
+	}
 }

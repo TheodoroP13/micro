@@ -74,24 +74,37 @@ class ModelQuery{
         $arrIgnoreRules = ['SUM', 'COUNT', 'MAX'];
 
         if(is_array($field)){
-            $tableName = class_exists($field[0]) ? (new $field[0])->getTableName() : $field[0];
+            if(class_exists($field[0])){
+                $tableName = Model::getTable($field[0]);
+                
+                $getField = Model::getPropByColumn($field[0], $field[1]);
+                if(!empty($getField)){
+                    $field[1] = $getField;
+                }
+            }else{
+                $tableName = $field[0];
+            }
 
             if($driver == DBDriver::MySQL){
-                return $tableName . ".`" . $field[1] . "`";
+                $result = $tableName . ".`" . $field[1] . "`";
             }
 
             if($driver == DBDriver::SQLServer){
-                // return "[" . $tableName . "].[" . $field[1] . "]";
-                return "[" . $field[1] . "]";
+                $result =  "[" . $field[1] . "]";
             }
 
-            return $tableName . "." . $field[1];            
+            return $result . (!empty($field[2]) ? (' AS ' . $field[2]): '');           
         }else if(is_string($field)){
             if(!empty(Model::getTable($this->obj)) && !in_array(substr($field, 0, 5), $arrIgnoreRules) && !in_array(substr($field, 0, 3), $arrIgnoreRules)){
                 $explodeField = explode(".", $field);
 
                 if(count($explodeField) == 2){
                     if(class_exists($explodeField[0])){
+                        $getPropByColumn = Model::getPropByColumn($explodeField[0], $explodeField[1]);
+                        if(!empty($getPropByColumn)){
+                            $explodeField[1] = $getPropByColumn;
+                        }
+
                         if($driver == DBDriver::MySQL){
                             $field = '`' . (new $explodeField[0])->getTableName() . '`' . ($this->handleAliasField($explodeField[1]));
                         }
@@ -107,9 +120,6 @@ class ModelQuery{
                         $field = ($explodeField[0] . $this->handleAliasField($explodeField[1]));
                     }
 
-                    // $field = class_exists($explodeField[0]) ? ((new $explodeField[0])->getTableName() . ($this->handleAliasField($explodeField[1]))) : ($explodeField[0] . $this->handleAliasField($explodeField[1]));
-                    
-                    // echo 1;
                     return $field;
                 }else if(count($explodeField) > 2){
                     return $field;
@@ -173,7 +183,19 @@ class ModelQuery{
                 if(count($explodeField) > 0){
                     foreach ($explodeField as &$itemField) {
                         if (strpos($itemField, "\\") !== false) {
-                            $itemField = class_exists($itemField) ? (new $itemField)->getTableName() : $itemField;
+                            if(class_exists($itemField)){
+                                $class = $itemField;
+                                $itemField = (new $itemField)->getTableName();
+                            }
+                        }
+
+                        if(!in_array($itemField, ['=', '<>'])){
+                            if(isset($class)){
+                                $getField = Model::getPropByColumn($class, $itemField);
+                                if(!empty($getField)){
+                                    $itemField = $getField;
+                                }
+                            }
                         }
                     }
 
