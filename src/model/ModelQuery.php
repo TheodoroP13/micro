@@ -33,7 +33,7 @@ class ModelQuery{
     }
 
     private function getDatabaseName() : string{
-        return \PSF::getConfig()->db[$this->query['database']]['database'];
+        return \PSF::getConfig()->db[Model::getDatabase($this->obj::class)]['database'];
     }
 
     private function handleTableName() : string{

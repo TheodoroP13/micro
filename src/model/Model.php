@@ -300,7 +300,7 @@ class Model{
 			return $attr->getName() === 'Database';
 		}));
 
-		return !empty($database) ? $database[0]->getArguments()[0] : FALSE; 
+		return !empty($database) ? $database[0]->getArguments()[0] : 'default'; 
 	}
 
 	public static function serializeData($class, array $data) : object|null{
