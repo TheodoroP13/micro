@@ -7,13 +7,6 @@
             "settings.php"
         ],
         "psr-4": {
-            "Prospera\\Database\\": "src/database/",
-            "Prospera\\Model\\": "src/model/",
-            "Prospera\\Api\\": "src/api/",
-            "Prospera\\Helper\\": "src/helpers/",
-            "Prospera\\Http\\": "src/http/",
-            "Prospera\\Utils\\": "src/utils/",
-            "Prospera\\Enumerators\\": "src/enum/",
             "Psf\\Database\\": "src/database/",
             "Psf\\Model\\": "src/model/",
             "Psf\\Api\\": "src/api/",
