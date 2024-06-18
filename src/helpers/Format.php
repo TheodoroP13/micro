@@ -1,6 +1,6 @@
 <?php
 
-namespace Prospera\Helper;
+namespace Psf\Helper;
 
 class Format{
 	public static function parseDate(string $date, string $outputFormat = 'd/m/Y') : bool|string{

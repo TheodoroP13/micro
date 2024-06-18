@@ -1,6 +1,6 @@
 <?php
 
-namespace Prospera\Enumerators;
+namespace Psf\Enumerators;
 
 enum HTTPBodyEncoded : int {
     case JSON            = 1;

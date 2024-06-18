@@ -1,6 +1,6 @@
 <?php
 
-namespace Prospera\Enumerators;
+namespace Psf\Enumerators;
 
 enum HTTPMethod : int {
     case GET            = 1;

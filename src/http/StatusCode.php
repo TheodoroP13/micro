@@ -1,6 +1,6 @@
 <?php
 
-namespace Prospera\Http;
+namespace Psf\Http;
 
 class StatusCode{
 	public const OK = 200;

@@ -1,6 +1,6 @@
 <?php
 
-namespace Pgf\Utils;
+namespace Psf\Utils;
 
 class CloudStorage{
 	public static function connect(){

@@ -1,6 +1,6 @@
 <?php
 
-namespace Prospera\Helper;
+namespace Psf\Helper;
 
 class Miscellaneous{
 	public static function calculeAge($date){

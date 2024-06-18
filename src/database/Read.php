@@ -1,6 +1,6 @@
 <?php
 
-namespace Prospera\Database;
+namespace Psf\Database;
 
 class Read extends Connect{
     private $select;

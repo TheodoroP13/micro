@@ -1,6 +1,6 @@
 <?php
 
-namespace Pgf\Utils;
+namespace Psf\Utils;
 
 use \PHPMailer\PHPMailer\PHPMailer;
 use \PHPMailer\PHPMailer\SMTP;

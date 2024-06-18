@@ -1,6 +1,6 @@
 <?php
 
-namespace Prospera\Utils;
+namespace Psf\Utils;
 
 class JWT{
     private static function base64urlEncode($data){

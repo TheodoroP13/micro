@@ -1,6 +1,6 @@
 <?php
 
-namespace Prospera\Helper;
+namespace Psf\Helper;
 
 class Text{
 	public static function capitalizeName($name){

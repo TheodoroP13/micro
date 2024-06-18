@@ -1,8 +1,8 @@
 <?php
 
-namespace Prospera\Model;
+namespace Psf\Model;
 
-use \Prospera\Enumerators\{DBDriver};
+use \Psf\Enumerators\{DBDriver};
 
 class ModelQuery{
     private $obj;
@@ -26,10 +26,10 @@ class ModelQuery{
             'freequery'     => NULL,
             'isCount'       => FALSE,
             'asArray'       => FALSE,
-            'database'      => $this->obj->database ?? 'default'
+            'database'      => Model::getDatabase($class) ?? 'default'
         ];
 
-        $this->configDb = \PSF::getConfig()->db[$this->obj->database]; 
+        $this->configDb = \PSF::getConfig()->db[Model::getDatabase($class)]; 
     }
 
     private function getDatabaseName() : string{
@@ -40,11 +40,11 @@ class ModelQuery{
         $driver = !empty($this->configDb['driver']) ? $this->configDb['driver'] : DBDriver::MySQL;
         
         if($driver == DBDriver::MySQL){
-            return '`' . $this->getDatabaseName() . '`.`' . $this->obj->table . '`';
+            return '`' . $this->getDatabaseName() . '`.`' . Model::getTable($this->obj::class) . '`';
         }
 
         if($driver == DBDriver::SQLServer){
-            return '[' . $this->getDatabaseName() . '].[dbo].[' . $this->obj->table . ']';
+            return '[' . $this->getDatabaseName() . '].[dbo].[' . Model::getTable($this->obj::class) . ']';
         }
 
         return $this->getDatabaseName() . '.' . $this->obj->table;
@@ -87,7 +87,7 @@ class ModelQuery{
 
             return $tableName . "." . $field[1];            
         }else if(is_string($field)){
-            if(isset($this->obj->table) && !empty($this->obj->table) && !in_array(substr($field, 0, 5), $arrIgnoreRules) && !in_array(substr($field, 0, 3), $arrIgnoreRules)){
+            if(!empty(Model::getTable($this->obj)) && !in_array(substr($field, 0, 5), $arrIgnoreRules) && !in_array(substr($field, 0, 3), $arrIgnoreRules)){
                 $explodeField = explode(".", $field);
 
                 if(count($explodeField) == 2){
@@ -189,22 +189,14 @@ class ModelQuery{
 
     public function andWhere(string|array $query, array|null $parses = null) : ModelQuery{
         $parse = uniqid();
+
         if(is_array($query)){
-            if(count($query) == 1){
+            if(count($query) === 1){
                 $this->query['parses'][$parse] = $query[array_keys($query)[0]];
                 $this->query['wheres'][] = $this->generateField(array_keys($query)[0]) . " = :" . $parse;
-            }else if(count($query) == 3){
-                if(in_array($query[1], $this->getAcceptComparativeOperators())){
-                    if($query[1] == "IS NULL" || $query[1] == "IS NOT NULL"){
-                        $this->query['wheres'][] = $this->generateField($query[0]) . " " . $query[1];
-                    }else{
-                        $this->query['parses'][$parse] = $query[2];
-                        $this->query['wheres'][] = $this->generateField($query[0]) . " " . $query[1] . " :" . $parse;
-                    }
-                }else{
-                    //Estourar erro
-                }
-            }else if(count($query) == 2){
+            }
+
+            if(count($query) === 2){
                 if($query[0] == "OR" && is_array($query[1])){
                     $stringFinal = "(";
                     $countItens = 0;
@@ -247,7 +239,9 @@ class ModelQuery{
                     if(!empty($stringFinal)){
                         $this->query['wheres'][] = $stringFinal;
                     }
-                }else if($query[0] == 'AND' && is_array($query[1])){
+                }
+
+                if($query[0] == 'AND' && is_array($query[1])){
                     $stringFinal = "(";
                     $countItens = 0;
                     foreach($query[1] as $key => $value){
@@ -280,10 +274,42 @@ class ModelQuery{
                     $stringFinal .= ")";
                     if(!empty($stringFinal)){
                         $this->query['wheres'][] = $stringFinal;
-                    } 
+                    }
+                }
+
+                if(in_array($query[1], ['IS NULL', 'IS NOT NULL'])){
+                    $this->query['wheres'][] = $this->generateField($query[0]) . " " . $query[1];
                 }
             }
-        }else if(is_string($query)){
+
+            if(count($query) === 3){
+                if(in_array($query[1], $this->getAcceptComparativeOperators())){
+                    if(strtoupper($query[1]) == "IS NULL" || strtoupper($query[1]) == "IS NOT NULL"){
+                        $this->query['wheres'][] = $this->generateField($query[0]) . " " . $query[1];
+                    }else{  
+                        $this->query['parses'][$parse] = $query[2];
+                        $this->query['wheres'][] = $this->generateField($query[0]) . " " . $query[1] . " :" . $parse;
+                    }
+                }else if(in_array(strtoupper($query[1]), ['IN', 'NOT IN']) && is_array($query[2])){
+                    $string = '';
+
+                    foreach($query[2] as $itemIn){
+                        $parse = uniqid();
+
+                        $string .= ':' . $parse . ',';
+                        $this->query['parses'][$parse] = $itemIn;
+                    }
+
+                    if(!empty($string)){
+                        $this->query['wheres'][] = $this->generateField($query[0]) . ' ' . $query[1] . ' (' . substr($string, 0, -1) . ')';
+                    }
+                }else{
+                    //Estourar erro
+                }
+            }
+        }
+
+        if(is_string($query)){
             if(!empty($parses)){
                 foreach($parses as $key => $item){
                     $parse = uniqid();
@@ -295,6 +321,7 @@ class ModelQuery{
                 $this->query['wheres'][] = $query;
             }
         }
+
         return $this;
     }
 
@@ -469,28 +496,34 @@ class ModelQuery{
     }
 
     public function execute(){
-        if(isset($this->configDb['fields']['status']) && !empty($this->configDb['fields']['status']) && property_exists($this->obj, $this->configDb['fields']['status'])){
-            $this->andWhere([$this->obj::class . '.' . $this->configDb['fields']['status'], '<>' , -1]);
-        }else{
-            if(property_exists($this->obj, "status")){
-                $this->andWhere([$this->obj::class . '.status', '<>' , -1]);
+        $refClass = new \ReflectionClass($this->obj::class);
+        foreach($refClass->getProperties() as $property){
+            $attributes = $property->getAttributes();
+
+            $column = array_values(array_filter($attributes, function($attr) use ($property){
+                return $attr->getName() === 'Column';
+            }));
+
+            if(!empty($column)){
+                $column = $column[0]->getArguments()[0];
+
+                $columnDeleted = array_values(array_filter($attributes, function($attr) use ($property){
+                    return $attr->getName() === 'ColumnDeletedDate';
+                }));
+
+                if(!empty($columnDeleted)){
+                    $this->andWhere([$this->obj::class . '.' . $column, 'IS NULL']);
+                    break;
+                }
             }
         }
 
-        if(isset($this->configDb['fields']['deletado']) && !empty($this->configDb['fields']['deletado']) && property_exists($this->obj, $this->configDb['fields']['deletado'])){
-            $this->andWhere([$this->obj::class . '.' . $this->configDb['fields']['deletado'], 'IS NULL', NULL]);
-        }else{
-            if(property_exists($this->obj, 'deletado')){
-                $this->andWhere([$this->obj::class . '.deletado', 'IS NULL', NULL]);
-            }
-        }
-
-        $Read = new \Prospera\Database\Read($this->obj->databaseConnect ?? null);
+        $Read = new \Psf\Database\Read();
         $Read->exe(
-            $this->obj->table,
+            Model::getTable($this->obj::class),
             $this->writeQuery(),
             $this->getParses(),
-            !empty($this->query['database']) ? $this->query['database'] : 'default',
+            Model::getDatabase($this->obj::class),
             true
         );
         return $this->queryResult($Read);
@@ -502,7 +535,7 @@ class ModelQuery{
         $stringQuery = "SELECT ";
 
         if($driver == DBDriver::SQLServer){
-            if(isset($this->query['limit']) && !empty($this->query['limit']) && $this->query['offset'] === NULL){
+            if(!empty($this->query['limit']) && $this->query['offset'] === NULL){
                 $stringQuery .= " TOP " . $this->query['limit'] . ' ';
             }
         } 
@@ -720,39 +753,21 @@ class ModelQuery{
         }
 
         if($Read->getRowCount() == 0){
-            return false;
+            return FALSE;
+        }
+
+        $result = $Read->getResult();
+
+        foreach($result as &$item){
+            $item = Model::serializeData($this->obj::class, $item);
         }
 
         if($Read->getRowCount() == 1 && $this->query['limit'] == 1){
-            if($this->query['asArray'] === true){
-                return $Read->getResult()[0];
-            }else{
-                $class = $this->obj::class;
-                $newObj = new $class;
-                $newObj->assign($Read->getResult()[0], true);
-                if(property_exists($this->obj, 'saveCache') && $this->obj->saveCache){
-                    $newObj->assign(["cache" => (object) $Read->getResult()[0]]);
-                }
-                $newObj->database = !empty($this->query['database']) ? $this->query['database'] : 'default';
-                return $newObj;
-            }
+            return $this->query['asArray'] === true ? (array) $result[0] : $result[0]; 
         }else if($Read->getRowCount() >= 1){
-            if($this->query['asArray'] === true){
-                return $Read->getResult();
-            }else{
-                $return = [];
-                $class = $this->obj::class;
-                foreach($Read->getResult() as $item){
-                    $newObj = new $class;
-                    $newObj->assign($item, true);
-                    if(property_exists($this->obj, 'saveCache') && $this->obj->saveCache){
-                        $newObj->assign(["cache" => (object) $item]);
-                    }
-                    $newObj->database = !empty($this->query['database']) ? $this->query['database'] : 'default';
-                    $return[] = $newObj;
-                }
-                return $return;
-            }
+            return $this->query['asArray'] === true ? array_map(function($item){
+                return (array) $item;
+            }, $result) : $result;
         }
     }
 

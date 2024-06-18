@@ -6,7 +6,7 @@
 // use \App\Models\Security\LogApi;
 // use \App\Models\User\User;
 
-use \Prospera\Enumerators\{DBDriver};
+use \Psf\Enumerators\{DBDriver};
 
 return [
     'project'    => [
@@ -45,14 +45,15 @@ return [
         ],
         'exported'  => [
             'driver'        => DBDriver::SQLServer,
-            'hostname'      => 'localhost',
+            'hostname'      => '192.168.1.6',
             'username'      => 'sa',
-            'password'      => 'sistemas',
-            'database'      => 'portal',  
+            'password'      => '89ica@tobix?',
+            'database'      => 'portalhml',  
             'extras'        => [
                 \PDO::ATTR_ERRMODE            => \PDO::ERRMODE_EXCEPTION,
                 \PDO::SQLSRV_ATTR_ENCODING    => \PDO::SQLSRV_ENCODING_UTF8,
-            ], 
+            ],
+            'savecache'     => TRUE,
         ],
     ],
 ];

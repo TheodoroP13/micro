@@ -1,8 +1,8 @@
 <?php
 
-namespace Prospera\Database;
+namespace Psf\Database;
 
-use \Prospera\Enumerators\{DBDriver};
+use \Psf\Enumerators\{DBDriver};
 
 class Create extends Connect{
     private $table;
@@ -12,7 +12,7 @@ class Create extends Connect{
     private $connection;
     private $database;
 
-    public static function exe($table, array $data, $database = 'default'){
+    public static function exe(string $table, array $data, $database = 'default'){
         $configDb = \PSF::getConfig()->db;
 
         $obj = new Create;

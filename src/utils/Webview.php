@@ -1,9 +1,9 @@
 <?php
 
-namespace Prospera\Utils;
+namespace Psf\Utils;
 
-use \Prospera\Http\Http;
-use \Prospera\Http\StatusCode;
+use \Psf\Http\Http;
+use \Psf\Http\StatusCode;
 
 class Webview{
 	public static function renderize(

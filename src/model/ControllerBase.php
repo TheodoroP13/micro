@@ -1,9 +1,9 @@
 <?php
 
-namespace Prospera\Model;
+namespace Psf\Model;
 
-use \Prospera\Utils\JWT;
-use \Prospera\Database\Connect;
+use \Psf\Utils\JWT;
+use \Psf\Database\Connect;
 
 class ControllerBase{
 	public $method;

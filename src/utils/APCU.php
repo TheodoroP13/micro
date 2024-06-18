@@ -1,6 +1,6 @@
 <?php
 
-namespace Prospera\Utils;
+namespace Psf\Utils;
 
 class APCU{
     public static function getStorage() : bool|array{

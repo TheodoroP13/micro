@@ -1,43 +1,18 @@
 <?php
 
-namespace Prospera\Model;
+namespace Psf\Model;
 
-use \Prospera\Database\{Connect, Create, Delete, Update};
-use \Prospera\Model\ModelQuery;
-use \Prospera\Helper\UUID;
-use \Prospera\Http\Http;
+use \Psf\Database\{Connect, Create, Delete, Update};
+use \Psf\Model\ModelQuery;
+use \Psf\Helper\UUID;
+use \Psf\Http\Http;
 
-use \Prospera\Enumerators\{DBDriver};
+use \Psf\Enumerators\{DBDriver};
 
 class Model{
-	public $table;
-	public $tableName;
-	public $database = 'default';
-
 	public function __construct(){
 		if(method_exists($this, 'onConstruct') && is_callable([$this, 'onConstruct'])){
 			call_user_func([$this, 'onConstruct']);
-		}
-
-		if(!isset($this->table) && !empty($this->tableName)){
-			$this->table = $this->tableName;
-			unset($this->tableName);
-		}
-
-		if(empty($this->table)){
-			unset($this->database);
-			unset($this->cache);
-			unset($this->table);
-		}else{
-			$listColuns = $this->getColunsForTable();
-
-			foreach($listColuns as $colun){
-				$this->{$colun->Field} = null;
-			}
-		}
-
-		if(property_exists($this, 'saveCache') && $this->saveCache === TRUE){
-			$this->{'cache'} = [];
 		}
 	}
 
@@ -49,170 +24,207 @@ class Model{
 		})));
 	}
 
-	public function getPrimarysQuery(){
-		$configDb 	= \PSF::getConfig()->db[$this->database];
+	public function getPrimarysQuery(bool $query = false){
+		$configDb 	= \PSF::getConfig()->db[Model::getDatabase($this)];
 		$driver 	= !empty($configDb['driver']) ? $configDb['driver'] : DBDriver::MySQL;
+		$primarys = [];
 
-		$primarys = $this->getPrimarysKeys();
+		$refClass = new \ReflectionClass($this::class);
+		foreach($refClass->getProperties() as $property){
+			$attributes = $property->getAttributes();
 
-       	if(count($primarys) == 1){
-       		return $driver === DBDriver::MySQL ? ("`".$this->table."`.`".$primarys[0]."` = ".$this->{$primarys[0]}) : ($driver === DBDriver::SQLServer ? ($primarys[0]." = ".$this->{$primarys[0]}) : []);
-       	}else if(count($primarys) > 1){
-       		$string = "";
-       		$count = 0;
+			$primarysKey = array_values(array_filter($attributes, function($attr) use ($property){
+				return $attr->getName() === 'PrimaryKey';
+			}));
 
-       		foreach($primarys as $item){
-       			if($count > 0){
-       				$string .= " AND ";
-       			}
-       			if($driver === DBDriver::MySQL){
-       				$string .= " `" . $this->table ."`.`". $item . "` = " . $this->{$item};
-       			}else if($driver === DBDriver::SQLServer){
-       				$string .= " " . $item . " = " . $this->{$item};
-       			}
-       			$count++;
-       		}
+			if(!empty($primarysKey)){
+				foreach($primarysKey as $column){
+					$primarys[] = $property->getName();
+				}
+				break;
+			}
+		}
 
-       		return $string;
-       	}else{
-       		throw new \Exception("DB Error - Primary Key Not Found");
-       	}
+		if(empty($primarys)){
+			throw new \Exception("DB Error - Primary Key Not Found");
+		}
+
+		if($query){
+	       	if(count($primarys) == 1){
+	       		return $driver === DBDriver::MySQL ? ("`". Model::getTable($this) ."`.`".$primarys[0]."` = ".$this->{$primarys[0]}) : ($driver === DBDriver::SQLServer ? ($primarys[0]." = ".$this->{$primarys[0]}) : []);
+	       	}else if(count($primarys) > 1){
+	       		$string = "";
+	       		$count = 0;
+
+	       		foreach($primarys as $item){
+	       			if($count > 0){
+	       				$string .= " AND ";
+	       			}
+	       			if($driver === DBDriver::MySQL){
+	       				$string .= " `" . Model::getTable($this) ."`.`". $item . "` = " . $this->{$item};
+	       			}else if($driver === DBDriver::SQLServer){
+	       				$string .= " " . $item . " = " . $this->{$item};
+	       			}
+	       			$count++;
+	       		}
+
+	       		return $string;
+	       	}
+	    }
+
+	    return $primarys;
 	}
 
 	public function getColunsForTable(){
-		return Connect::getColunsForTable($this->table, $this->database);
+		return Connect::getColunsForTable(Model::getTable($this), Model::getDatabase($this));
+	}
+
+	public static function serializeFields($object) : array{
+		$refClass = new \ReflectionClass($object::class);
+		foreach($refClass->getProperties() as $property){
+			$attributes = $property->getAttributes();
+
+			$column = array_values(array_filter($attributes, function($attr) use ($property){
+				return $attr->getName() === 'Column';
+			}));
+
+			if(!empty($column)){
+				$column = $column[0]->getArguments()[0];
+
+				$standardValue = array_values(array_filter($attributes, function($attr) use ($property){
+					return $attr->getName() === 'Standard' && !empty($attr->getArguments()[0]);
+				}));
+
+				if(!empty($standardValue) && empty($object->{$property->getName()})){
+					if(property_exists($standardValue[0]->getArguments()[0], 'value')){
+						$object->{$property->getName()} = $standardValue[0]->getArguments()[0]->value;
+					}else{
+						if(strtoupper($standardValue[0]->getArguments()[0]) === 'NOW()'){
+							$object->{$property->getName()} = date('Y-m-d H:i:s');
+						}else{
+							$object->{$property->getName()} = $standardValue[0]->getArguments()[0];
+						}
+					}
+
+					$fields[$column] = $object->{$property->getName()};
+				}
+
+				$columnCreatedDate = array_values(array_filter($attributes, function($attr) use ($property){
+					return $attr->getName() === 'ColumnCreatedDate';
+				}));
+
+				if(!empty($columnCreatedDate) && empty($object->{$property->getName()})){
+					$object->{$property->getName()} = date('Y-m-d H:i:s');
+					$fields[$column] = date('Y-m-d H:i:s');
+				}
+
+				$columnUpdatedDate = array_values(array_filter($attributes, function($attr) use ($property){
+					return $attr->getName() === 'ColumnUpdatedDate';
+				}));
+
+				if(!empty($columnUpdatedDate) && empty($object->{$property->getName()})){
+					$object->{$property->getName()} = date('Y-m-d H:i:s');
+					$fields[$column] = date('Y-m-d H:i:s');
+				}
+
+				$required = array_values(array_filter($attributes, function($attr) use ($property){
+					return $attr->getName() === 'Nullable' && $attr->getArguments()[0] === false;
+				}));
+
+				if(!empty($required) && empty($object->{$property->getName()})){
+					return throw new \Exception("O campo '" . $property->getName() . "' não pode ser nulo");
+				}
+
+				if(!empty($object->{$property->getName()}) && empty($fields[$column])){
+					$fields[$column] = $object->{$property->getName()};
+				}
+			}
+		}
+
+		return $fields ?? [];
 	}
 
 	public function create(){
-		$configDb 	= \PSF::getConfig()->db[$this->database];
-		$driver 	= !empty($configDb['driver']) ? $configDb['driver'] : DBDriver::MySQL;
-		
-		if(isset($this->configDb['fields']['incluido']) && !empty(isset($this->configDb['fields']['incluido']))){
-			if(property_exists($this, $this->configDb['fields']['incluido'])){
-				$this->{$this->configDb['fields']['incluido']} = date("Y-m-d H:i:s");
-			}
-		}else{
-			if(property_exists($this, "incluido")){
-				$this->incluido = date("Y-m-d H:i:s");
-			}
-		}
+		$fields = Model::serializeFields($this);
 
-		if(isset($this->configDb['fields']['hash']) && !empty(isset($this->configDb['fields']['hash']))){
-			if(property_exists($this, $this->configDb['fields']['hash'])){
-				$this->{$this->configDb['fields']['hash']} = $this->hash = UUID::generate(4);
-			}
-		}else{
-			if(property_exists($this, "hash") && empty($this->hash)){
-				$this->hash = UUID::generate(4);
-			}
-		}
+		$Create = Create::exe(
+			table: Model::getTable($this), 
+			data: $fields, 
+			database: Model::getDatabase($this)
+		);
 
-		if(isset($this->configDb['fields']['status']) && !empty(isset($this->configDb['fields']['status']))){
-			if(property_exists($this, $this->configDb['fields']['status'])){
-				$this->{$this->configDb['fields']['status']} = 1;
-			}
-		}else{
-			if(property_exists($this, "status") && empty($this->status)){
-				$this->status = 1;
-			}
-		}
-		
-		$fields = [];
-		$columns = array_map(function($item){
-			return $item->Field;
-		}, $this->getColunsForTable());
-
-		foreach($columns as $item){
-			if(property_exists($this, $item)){
-				$fields[$item] = $this->{$item};
-			}
-		}
-
-		if($driver == DBDriver::SQLServer){
-			unset($fields[$this->getIdentityColumn()]);
-		}
-		
-		$Create = Create::exe($this->table, $fields, $this->database);
 		if($Create->getResult() !== FALSE){
-			$this->id = $Create->getResult();
-
-			if(property_exists($this, 'saveCache') && $this->saveCache && !isset($this->cache) || empty($this->cache)){
-				$this->cache = clone $this;
+			if(property_exists($this::class, 'id')){
+				$this->id = $Create->getResult();
 			}
 
 			return TRUE;
-		}else{
-			return FALSE;
 		}
+
+		return FALSE;
 	}
 
 	public function save(){
-		$configDb 	= \PSF::getConfig()->db[$this->database];
-		$driver 	= !empty($configDb['driver']) ? $configDb['driver'] : DBDriver::MySQL;
+		$primarysKey = $this->getPrimarysQuery();
+		$fields = Model::serializeFields($this);
 
-		$propertyChange = isset($this->configDb['fields']['alterado']) && !empty(isset($this->configDb['fields']['alterado'])) ? $this->configDb['fields']['alterado'] : (property_exists($this, 'alterado') ? 'alterado' : NULL);
+		$fieldsExclude = array_filter(array_keys($fields), function($item) use ($primarysKey){
+			return in_array($item, $primarysKey);
+		});
 
-		if(!empty($propertyChange)){
-			$propertyDeleted = isset($this->configDb['fields']['deletado']) && !empty(isset($this->configDb['fields']['deletado'])) ? $this->configDb['fields']['deletado'] : (property_exists($this, 'deletado') ? 'deletado' : NULL);
-
-			if(!empty($propertyDeleted) && empty($this->{$propertyDeleted})){
-				$this->{$propertyChange} = date('Y-m-d H:i:s');
+		if(!empty($fieldsExclude)){
+			foreach($fieldsExclude as $field){
+				unset($fields[$field]);
 			}
 		}
 
-		$fields = [];
-		$columns = array_map(function($item){
-			return $item->Field;
-		}, $this->getColunsForTable());
-
-		foreach($columns as $item){
-			$fields[$item] = $this->{$item};
-		}
-
-		if($driver == DBDriver::SQLServer){
-			unset($fields[$this->getIdentityColumn()]);
-		}
-
-		$Update = Update::exe($this->table, $fields, "WHERE " . $this->getPrimarysQuery(), null, $this->database);
+		$Update = Update::exe(
+			table: Model::getTable($this::class), 
+			data: $fields, 
+			terms: 'WHERE ' . $this->getPrimarysQuery(true), 
+			database: Model::getDatabase($this::class)
+		);
 
 		return $Update->getResult();
 	}
 
 	public function delete(){
-		$configDb 	= \PSF::getConfig()->db[$this->database];
-		$softDelete = false;
+		$softDelete = FALSE;
 
-		if(isset($this->configDb['fields']['deletado']) && !empty(isset($this->configDb['fields']['deletado']))){
-			if(property_exists($this, $this->configDb['fields']['deletado'])){
-				$this->{$this->configDb['fields']['deletado']} = date("Y-m-d H:i:s");
-				$softDelete = true;
-			}
-		}else{
-			if(property_exists($this, "deletado")){
-				$this->deletado = date("Y-m-d H:i:s");
-				$softDelete = true;
+		$refClass = new \ReflectionClass($this::class);
+		foreach($refClass->getProperties() as $property){
+			$attributes = $property->getAttributes();
+
+			$column = array_values(array_filter($attributes, function($attr) use ($property){
+				return $attr->getName() === 'Column';
+			}));
+
+			if(!empty($column)){
+				$column = $column[0]->getArguments()[0];
+
+				$columnDeleted = array_values(array_filter($attributes, function($attr) use ($property){
+					return $attr->getName() === 'ColumnDeletedDate';
+				}));
+
+				if(!empty($columnDeleted)){
+					$softDelete = $column;
+					$this->{$property->getName()} = date('Y-m-d H:i:s');
+					break;
+				}
 			}
 		}
 
 		if(!$softDelete){
-			if(isset($this->configDb['fields']['status']) && !empty(isset($this->configDb['fields']['status']))){
-				if(property_exists($this, $this->configDb['fields']['status'])){
-					$this->{$this->configDb['fields']['status']} = date("Y-m-d H:i:s");
-					$softDelete = true;
-				}
-			}else{
-				if(property_exists($this, "status")){
-					$this->status = date("Y-m-d H:i:s");
-					$softDelete = true;
-				}
-			}
+			Delete::exe(
+				table: Model::getTable($this::class),
+				terms: 'WHERE ' . $this->getPrimarysQuery(true),
+				database: Model::getDatabase($this::class)
+			);
+
+			return TRUE;
 		}
 
-		if($softDelete){
-			$this->save();
-		}else{
-			Delete::exe($this->table, "WHERE " . $this->getPrimarysQuery(), null, $this->database);
-		}
+		return $this->save();
 	}
 
 	public function assign(object|array $values, bool $force = false){
@@ -239,7 +251,7 @@ class Model{
 	}
 
 	public function getTableName(){
-		return $this->table;
+		return Model::getTable($this::class);
 	}
 
 	public function getIdentityColumn(){
@@ -273,5 +285,42 @@ class Model{
 		}
 
 		return FALSE;
+	}
+
+	public static function getTable($class){
+		$table = array_values(array_filter((new \ReflectionClass($class))->getAttributes(), function($attr){
+			return $attr->getName() === 'Table';
+		}));
+
+		return !empty($table) ? $table[0]->getArguments()[0] : FALSE; 
+	}
+
+	public static function getDatabase($class){
+		$database = array_values(array_filter((new \ReflectionClass($class))->getAttributes(), function($attr){
+			return $attr->getName() === 'Database';
+		}));
+
+		return !empty($database) ? $database[0]->getArguments()[0] : FALSE; 
+	}
+
+	public static function serializeData($class, array $data) : object|null{
+		$obj = new $class;
+
+		$refClass = new \ReflectionClass($class);
+		foreach($refClass->getProperties() as $property){
+			$attributes = $property->getAttributes();
+
+			$column = array_values(array_filter($attributes, function($attr) use ($property){
+				return $attr->getName() === 'Column';
+			}));
+
+			if(empty($column)){
+				return NULL;
+			}
+
+			$obj->{$property->getName()} = !empty($data[$column[0]->getArguments()[0]]) ? $data[$column[0]->getArguments()[0]] : NULL;
+		}
+
+		return $obj;
 	}
 }

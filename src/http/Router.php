@@ -1,8 +1,8 @@
 <?php
 
-namespace Prospera\Http;
+namespace Psf\Http;
 
-use \Prospera\Http\{StatusCode, Http};
+use \Psf\Http\{StatusCode, Http};
 
 #[Attribute]
 class Router{

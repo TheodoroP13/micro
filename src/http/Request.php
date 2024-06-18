@@ -1,8 +1,8 @@
 <?php
 
-namespace Prospera\Http;
+namespace Psf\Http;
 
-use \Prospera\Enumerators\{HTTPMethod, HTTPBodyEncoded};
+use \Psf\Enumerators\{HTTPMethod, HTTPBodyEncoded};
 
 class Request{
 	private $settings;

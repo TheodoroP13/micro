@@ -1,6 +1,6 @@
 <?php
 
-namespace Prospera\Model;
+namespace Psf\Model;
 
 trait EnumTrait{
 	public static function verifyCaseExistByKey($key){

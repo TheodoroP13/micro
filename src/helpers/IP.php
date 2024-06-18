@@ -1,8 +1,8 @@
 <?php
 
-namespace Prospera\Helper;
+namespace Psf\Helper;
 
-use \Prospera\Http\Http;
+use \Psf\Http\Http;
 
 class IP{
 	protected static $url = "http://www.geoplugin.net/json.gp?ip=";

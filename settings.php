@@ -3,7 +3,7 @@
 define('DR', DIRECTORY_SEPARATOR);
 define('ROOT', realpath($_SERVER['DOCUMENT_ROOT'] ?: dirname(__FILE__)));
 
-use \Prospera\Http\Http;
+use \Psf\Http\Http;
 
 class PSF{
     private static $config;
@@ -35,14 +35,14 @@ if(!function_exists('getallheaders')){
 }
 
 function explodeException($error){
-    if(isset(\PSF::getConfig()->settings['debug']) && \PSF::getConfig()->settings['debug']){
-        Http::response("Error completing a request, contact the technical team", [
+    // if(isset(\PSF::getConfig()->settings['debug']) && \PSF::getConfig()->settings['debug']){
+        Http::response("Erro na execução da tarefa! Por favor, contacte o suporte.", [
             'code'  => $error->getCode(),
             'msg'   => $error->getMessage(),
             'file'  => $error->getFile(),
             'line'  => $error->getLine()
         ], 500);
-    }else{
-        Http::response('Erro na execução da tarefa! Por favor, contacte o suporte.', [], 500);
-    }
+    // }else{
+        // Http::response('Erro na execução da tarefa! Por favor, contacte o suporte.', [], 500);
+    // }
 }

@@ -1,6 +1,6 @@
 <?php
 
-namespace Prospera\Enumerators;
+namespace Psf\Enumerators;
 
 enum DBDriver : int {
     case MySQL          = 1;

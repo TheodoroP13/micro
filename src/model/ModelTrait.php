@@ -1,6 +1,6 @@
 <?php
 
-namespace Prospera\Model;
+namespace Psf\Model;
 
 // use \Pgf\Http\Http;
 

@@ -1,8 +1,8 @@
 <?php
 
-namespace Prospera\Database;
+namespace Psf\Database;
 
-use \Prospera\Enumerators\{DBDriver};
+use \Psf\Enumerators\{DBDriver};
 
 class Update extends Connect{
     private $table;

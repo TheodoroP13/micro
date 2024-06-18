@@ -1,6 +1,6 @@
 {
-    "name": "prospera/framework",
-    "description": "Framework para o desenvolvimento de webapps Prospera",
+    "name": "psf/framework",
+    "description": "Framework para o desenvolvimento de webapps",
     "type": "library",
     "autoload": {
         "files": [
@@ -13,13 +13,20 @@
             "Prospera\\Helper\\": "src/helpers/",
             "Prospera\\Http\\": "src/http/",
             "Prospera\\Utils\\": "src/utils/",
-            "Prospera\\Enumerators\\": "src/enum/"
+            "Prospera\\Enumerators\\": "src/enum/",
+            "Psf\\Database\\": "src/database/",
+            "Psf\\Model\\": "src/model/",
+            "Psf\\Api\\": "src/api/",
+            "Psf\\Helper\\": "src/helpers/",
+            "Psf\\Http\\": "src/http/",
+            "Psf\\Utils\\": "src/utils/",
+            "Psf\\Enumerators\\": "src/enum/"
         }
     },
     "authors": [
         {
             "name": "Theodoro Paim",
-            "email": "theodoro@prosperasistemas.com"
+            "email": "theodoro@porglin.com"
         }
     ],
     "require": {
