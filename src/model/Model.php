@@ -153,7 +153,7 @@ class Model{
 			database: Model::getDatabase($this)
 		);
 
-		if($Create->getResult() !== FALSE){
+		if(!empty($Create)){
 			if(property_exists($this::class, 'id')){
 				$this->id = $Create->getResult();
 			}
@@ -303,24 +303,48 @@ class Model{
 		return !empty($database) ? $database[0]->getArguments()[0] : 'default'; 
 	}
 
-	public static function serializeData($class, array $data) : object|null{
-		$obj = new $class;
-
+	public static function serializeData($class, array $data, bool $asArray = FALSE) : object|array|null{
+		$response = new $class;
 		$refClass = new \ReflectionClass($class);
-		foreach($refClass->getProperties() as $property){
-			$attributes = $property->getAttributes();
 
-			$column = array_values(array_filter($attributes, function($attr) use ($property){
-				return $attr->getName() === 'Column';
-			}));
+		if(!$asArray){
+			foreach($refClass->getProperties() as $property){
+				$attributes = $property->getAttributes();
 
-			if(empty($column)){
-				return NULL;
+				$column = array_values(array_filter($attributes, function($attr) use ($property){
+					return $attr->getName() === 'Column';
+				}));
+
+				if(!empty($column)){
+					$response->{$property->getName()} = !empty($data[$column[0]->getArguments()[0]]) ? $data[$column[0]->getArguments()[0]] : NULL;
+				}
 			}
+		}else{
+			$response = [];
+			
+			foreach(array_keys($data) as $key){
+				$findColumnExist = array_values(array_filter($refClass->getProperties(), function($prop) use ($key){
+					$attributes = $prop->getAttributes();
 
-			$obj->{$property->getName()} = !empty($data[$column[0]->getArguments()[0]]) ? $data[$column[0]->getArguments()[0]] : NULL;
+					$column = array_values(array_filter($attributes, function($attr) use ($prop, $key){
+						return $attr->getName() === 'Column' && $attr->getArguments()[0] == $key;
+					}));
+
+					if(!empty($column)){
+						$column = $column[0]->getArguments()[0];
+
+						return $column;
+					}
+				}));
+
+				if(!empty($findColumnExist)){
+					$response[$findColumnExist[0]->getName()] = $data[$key];
+				}else{
+					$response[$key] = $data[$key];
+				}
+			}
 		}
 
-		return $obj;
+		return $response;
 	}
 }

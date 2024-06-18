@@ -47,7 +47,7 @@ class ModelQuery{
             return '[' . $this->getDatabaseName() . '].[dbo].[' . Model::getTable($this->obj::class) . ']';
         }
 
-        return $this->getDatabaseName() . '.' . $this->obj->table;
+        return $this->getDatabaseName() . '.' . Model::getTable($this->obj::class);
     }
 
     public static function getHandleTableName(string $database = 'default', string $table) : string{
@@ -115,7 +115,7 @@ class ModelQuery{
                     return $field;
                 }else{
                     if($driver == DBDriver::MySQL){
-                        return $this->obj->table . ".`" . $field . "`";
+                        return Model::getTable($this->obj::class) . ".`" . $field . "`";
                     }
 
                     if($driver == DBDriver::SQLServer){
@@ -123,7 +123,7 @@ class ModelQuery{
                         return "[" . $field . "]";
                     }
 
-                    return $this->obj->table . "." . $field;
+                    return Model::getTable($this->obj::class) . "." . $field;
                 }
             }
         }else if(is_object($field) && isset($field->Field)){    
@@ -574,11 +574,11 @@ class ModelQuery{
             if((isset($this->query['innerJoins']) && !empty($this->query['innerJoins'])) || (isset($this->query['leftJoins']) && !empty($this->query['leftJoins']))){
 
                 if($driver == DBDriver::MySQL){
-                    $fieldsQuery = '`' . $this->obj->table . '`.*';
+                    $fieldsQuery = '`' . Model::getTable($this->obj::class) . '`.*';
                 }
 
                 if($driver == DBDriver::SQLServer){
-                    $fieldsQuery = '[' . $this->obj->table . '].*';
+                    $fieldsQuery = '[' . Model::getTable($this->obj::class) . '].*';
                 }
             }else{
                 $fieldsQuery = '*';
@@ -759,15 +759,13 @@ class ModelQuery{
         $result = $Read->getResult();
 
         foreach($result as &$item){
-            $item = Model::serializeData($this->obj::class, $item);
+            $item = Model::serializeData($this->obj::class, $item, $this->query['asArray']);
         }
 
         if($Read->getRowCount() == 1 && $this->query['limit'] == 1){
             return $this->query['asArray'] === true ? (array) $result[0] : $result[0]; 
         }else if($Read->getRowCount() >= 1){
-            return $this->query['asArray'] === true ? array_map(function($item){
-                return (array) $item;
-            }, $result) : $result;
+            return $result;
         }
     }
 
