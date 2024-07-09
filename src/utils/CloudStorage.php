@@ -4,7 +4,7 @@ namespace Psf\Utils;
 
 class CloudStorage{
 	public static function connect(){
-		$configAws = \PGF::getConfig()->aws;
+		$configAws = \PSF::getConfig()->aws;
 
 		if(strtoupper($configAws['provider']) == 'R2'){
 			$credentials = new \Aws\Credentials\Credentials($configAws['access_key_id'], $configAws['access_key_secret']);
@@ -27,7 +27,7 @@ class CloudStorage{
 	} 
 
 	public static function putObject(\Aws\S3\S3Client $connect, string $filename, $atualpath, string $acl = 'public-read', string $filetype = 'binary'){
-		$configAws = \PGF::getConfig()->aws;
+		$configAws = \PSF::getConfig()->aws;
 
 		if(strtoupper($configAws['provider']) == 'R2'){
 			try {
@@ -46,7 +46,7 @@ class CloudStorage{
 	}
 
 	public static function deleteObject(\Aws\S3\S3Client $connect, string $filename){
-		$configAws = \PGF::getConfig()->aws;
+		$configAws = \PSF::getConfig()->aws;
 
 		if(strtoupper($configAws['provider']) == 'R2'){
 			try {
