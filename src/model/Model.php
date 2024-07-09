@@ -128,11 +128,17 @@ class Model{
 				}
 
 				$required = array_values(array_filter($attributes, function($attr) use ($property){
-					return $attr->getName() === 'Nullable' && $attr->getArguments()[0] === false;
+					return $attr->getName() === 'Nullable';
 				}));
 
-				if(!empty($required) && empty($object->{$property->getName()})){
+				if(!empty($required)){
+					$required = $required[0]->getArguments()[0];
+				}
+
+				if($required === FALSE && empty($object->{$property->getName()})){
 					return throw new \Exception("O campo '" . $property->getName() . "' não pode ser nulo");
+				}else if(!empty($required)){
+					$fields[$column] = $object->{$property->getName()};
 				}
 
 				if(!empty($object->{$property->getName()}) && empty($fields[$column])){
@@ -367,5 +373,25 @@ class Model{
         }
 
 		return FALSE;
+	}
+
+	public static function getPrimaryKey($class, $type = 'column'){
+		$refClass = new \ReflectionClass($class);
+		foreach($refClass->getProperties() as $property){
+			$attributes = $property->getAttributes();
+
+			$primarysKey = array_values(array_filter($attributes, function($attr) use ($property){
+				return $attr->getName() === 'PrimaryKey';
+			}));
+
+			if(!empty($primarysKey)){
+				foreach($primarysKey as $column){
+					$primarys[] = $type == 'column' ? Model::getPropByColumn($class, $property->getName()) : $property->getName();
+				}
+				break;
+			}
+		}
+
+		return !empty($primarys) ? $primarys : NULL; 
 	}
 }

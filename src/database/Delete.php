@@ -22,8 +22,10 @@ class Delete extends Connect{
         $obj->terms = (string) $terms;
 
         if(self::verifyTableExist($table, $database)){
-            parse_str($parseString, $obj->places);
-            
+            if(!empty($parseString) && !empty($obj->places)){
+                parse_str($parseString, $obj->places);
+            }
+
             $obj->delete = "DELETE FROM {$obj->table} {$obj->terms}";
 
             try{
