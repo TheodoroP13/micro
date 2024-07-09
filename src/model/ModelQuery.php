@@ -553,6 +553,7 @@ class ModelQuery{
 
     private function writeQuery() : string{
         $driver = !empty($this->configDb['driver']) ? $this->configDb['driver'] : DBDriver::MySQL;
+        $primaryKeys = Model::getPrimaryKey($this->obj::class);
 
         $stringQuery = "SELECT ";
 
@@ -571,26 +572,12 @@ class ModelQuery{
         }
 
         if(isset($this->query['isCount']) && $this->query['isCount'] === true){
-            if($driver == DBDriver::MySQL){
-                if(property_exists($this->obj, "code")){
-                    $fieldsQuery = "COUNT(" . $this->generateField("code") . ") as qtd";
-                }else{
-                    $fieldsQuery = "COUNT(" . $this->generateField($this->obj->getColunsForTable()[0]) . ") as qtd";
-                }
-            }else if($driver == DBDriver::SQLServer){
-                $this->query['order'] = NULL;
-                // var_dump($this->query);
-                // $fieldsQuery = $this->generateField($this->obj->getColunsForTable()[0]);
+            if(!empty($primaryKeys)){
+                $fieldsQuery = "COUNT(" . $this->generateField($primaryKeys[0]) . ") as qtd";
 
-                $identity = $this->obj->getIdentityColumn();
-                if(empty($identity)){
-                    $fieldsQuery = "COUNT(" . $this->generateField($this->obj::class . '.' . $this->obj->getColunsForTable()[0]) . ") as qtd";
-                }else{
-                    $fieldsQuery = "COUNT(" . $this->generateField($this->obj::class . '.' . $this->obj->getIdentityColumn()) . ") as qtd";
+                if($driver == DBDriver::SQLServer){
+                    $this->query['order'] = NULL;
                 }
-
-                
-                // $fieldsQuery = "COUNT(" . $this->generateField($this->obj->getColunsForTable()[0]) . ") as qtd";
             }
         }else if(!isset($this->query['fields']) || empty($this->query['fields'])){
             if((isset($this->query['innerJoins']) && !empty($this->query['innerJoins'])) || (isset($this->query['leftJoins']) && !empty($this->query['leftJoins']))){
@@ -819,10 +806,6 @@ class ModelQuery{
         $this->query['asArray'] = true;
         $this->query['limit'] = $itensPerPage;
         $this->query['offset'] = $initIn;
-
-        // var_dump($this);
-        // die;
-        // var_dump($this->getRowQuery());
 
         $itens = $this->execute();
         if($itens == false){
