@@ -394,4 +394,34 @@ class Model{
 
 		return !empty($primarys) ? $primarys : NULL; 
 	}
+
+	public static function getColumnByProp($class, $prop = null) : string|array|bool{
+		$refClass = new \ReflectionClass($class);
+
+		if(!empty($prop)){
+	        $findPropertie = array_values(array_filter($refClass->getProperties(), function($item) use ($prop){
+	            return $prop === $item->getName();
+	        }));
+	    }else{
+	    	$findPropertie = $refClass->getProperties();
+	    }
+
+        if(!empty($findPropertie)){
+        	foreach($findPropertie as $propItem){
+        		$attributes = $propItem->getAttributes();
+
+	            $column = array_values(array_filter($attributes, function($attr){
+	                return $attr->getName() === 'Column';
+	            }));
+
+	            if(!empty($column)){
+	                $columns[] = $column[0]->getArguments()[0];
+	            }
+        	}
+
+        	return empty($prop) ? $columns : (!empty($columns) ? $columns[0] : FALSE);
+        }
+
+		return FALSE;
+	}
 }

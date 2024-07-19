@@ -495,9 +495,11 @@ class ModelQuery{
         return $this;
     }
 
-    public function orderBy(string $field, string $type = "ASC") : ModelQuery{
+    public function orderBy(string $field, string|null $type = "ASC") : ModelQuery{
         if($type == "ASC" || $type == "DESC"){
             $this->query['order'][] = $this->generateField($field) . " " . $type;
+        }else{
+            $this->query['order'][] = $field;
         }
         return $this;
     }
@@ -901,5 +903,26 @@ class ModelQuery{
         }
 
         return 0;
+    }
+
+    public function getAllFields($class){
+        $driver = !empty($this->configDb['driver']) ? $this->configDb['driver'] : DBDriver::MySQL;
+        $columns = Model::getColumnByProp($class);
+
+        if(!empty($columns) && is_array($columns)){
+            if($driver == DBDriver::MySQL){
+                return implode(',', array_map(function($item){
+                    return '`' . Model::getTable($this->obj::class) . '`.`' . $item . '`';
+                }, $columns));
+            }
+
+            if($driver == DBDriver::SQLServer){
+                return implode(',', array_map(function($item){
+                    return '[' . Model::getTable($this->obj::class) . '].[' . $item . ']';
+                }, $columns));
+            }
+        }
+
+        return '`' . Model::getTable($this->obj::class) . '`.*';
     }
 }
