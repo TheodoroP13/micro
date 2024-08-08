@@ -24,7 +24,7 @@
     ],
     "require": {
         "php": ">8.0",
-        "phpmailer/phpmailer": "^8.1",
+        "phpmailer/phpmailer": "^6.1",
         "jenssegers/agent": "^2.6",
         "aws/aws-sdk-php": "^3.270"
     },
