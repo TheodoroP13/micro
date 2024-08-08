@@ -141,7 +141,7 @@ class Model{
 					$fields[$column] = $object->{$property->getName()};
 				}
 
-				if(!empty($object->{$property->getName()}) && empty($fields[$column])){
+				if((!empty($object->{$property->getName()}) || $object->{$property->getName()} == 0) && empty($fields[$column])){
 					$fields[$column] = $object->{$property->getName()};
 				}
 			}
