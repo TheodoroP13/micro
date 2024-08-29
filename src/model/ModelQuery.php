@@ -74,6 +74,10 @@ class ModelQuery{
         $arrIgnoreRules = ['SUM', 'COUNT', 'MAX'];
 
         if(is_array($field)){
+            if($field[0] == 'subquery'){
+                return $field[1];
+            }
+            
             if(class_exists($field[0])){
                 $tableName = Model::getTable($field[0]);
                 
