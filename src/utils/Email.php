@@ -13,8 +13,8 @@ class Email{
 
 	public function __construct($server = null){
 		if(empty($server)){
-			if(\PGF::getConfig()->smtp && !empty(\PGF::getConfig()->smtp['hostname'])){
-				$this->server = \PGF::getConfig()->smtp;
+			if(\PSF::getConfig()->smtp && !empty(\PSF::getConfig()->smtp['hostname'])){
+				$this->server = \PSF::getConfig()->smtp;
 			}else{
 				$this->error = "Não foi possível localizar a configuração do servidor SMTP...";
 				

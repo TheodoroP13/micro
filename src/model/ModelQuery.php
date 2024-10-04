@@ -50,7 +50,7 @@ class ModelQuery{
         return $this->getDatabaseName() . '.' . Model::getTable($this->obj::class);
     }
 
-    public static function getHandleTableName(string $database = 'default', string $table) : string{
+    public static function getHandleTableName(string $table, string $database = 'default') : string{
         $configDb   = \PSF::getConfig()->db;
         $driver     = !empty($configDb[$database]['driver']) ? $configDb[$database]['driver'] : DBDriver::MySQL;
 
