@@ -145,42 +145,136 @@ class Router{
 		}
 	}
 
+	// private function callMethodRoute(){
+	// 	$urlFind = self::clearUrl($_GET['_url']);
+
+	// 	if(substr($urlFind, 0, 1) == 'v' && is_numeric(substr($urlFind, 1, 1))){
+	// 		$this->version = (int) substr($urlFind, 1, 1);
+	// 		$urlFind = substr($urlFind, 3);
+	// 	}
+
+	// 	$explodeUrl = explode("/", $urlFind);
+	// 	$this->piecesArr = $explodeUrl;
+	// 	$j = count($explodeUrl);
+
+	// 	$filterMetch = array_filter($this->routes, function($item){
+	// 	    return $item['attributes']['arguments']['method'] == $this->method;
+	// 	});
+
+	// 	if(!empty($this->version)){
+	// 		$filterMetch = array_filter($filterMetch, function($item){
+	// 		    return $item['attributes']['arguments']['version'] == $this->version;
+	// 		});
+	// 	}
+
+	// 	$this->pieces = empty($explodeUrl[0]) ? count($explodeUrl) - 1 : count($explodeUrl);
+
+	// 	$filterMetch = array_filter($filterMetch, function($item){
+	// 		return count(explode("/", $item['attributes']['arguments']['path'])) == $this->pieces;
+	// 	});
+
+	// 	$filterMetch = array_filter($filterMetch, function($item){
+	// 		$explodeFields 	= explode("/", $item['attributes']['arguments']['path']);
+
+	// 		$check = true;
+	// 		for ($i=0; $i < $this->pieces; $i++) {
+	// 			if(substr($explodeFields[$i], 0, 1) == "{" && substr($explodeFields[$i], -1) == "}"){
+	// 				$getExpression = explode(":", substr($explodeFields[$i], 1, -1))[1];
+
+	// 				if(isset(self::$patterns[$getExpression]) && !empty(self::$patterns[$getExpression])){
+	// 					if(!preg_match(self::$patterns[$getExpression], $this->piecesArr[$i])){
+	// 						$check = false;
+	// 						break;
+	// 					}
+	// 				}else if(!preg_match("/" . $getExpression . "/", $this->piecesArr[$i])){
+	// 					$check = false;
+	// 					break;
+	// 				}
+	// 			}else{
+	// 				if($explodeFields[$i] != $this->piecesArr[$i]){
+	// 					$check = false;
+	// 					break;
+	// 				}
+	// 			}
+	// 		}
+
+	// 		if($check){
+	// 			return $item;
+	// 		}	
+	// 	});
+
+	// 	if(empty($filterMetch) || count($filterMetch) > 1){
+	// 		throw new \Exception("Não foi possível encontrar a rota correspondente.");
+	// 	}else{
+	// 		$filterMetch = (reset($filterMetch));
+
+	// 		if(is_callable([new $filterMetch['class'], $filterMetch['name']])){
+	// 			$middlewares = isset($filterMetch['attributes']['arguments']['middlewares']) && is_array($filterMetch['attributes']['arguments']['middlewares']) ? $filterMetch['attributes']['arguments']['middlewares'] : [];
+
+	// 			if(in_array('authentication', $middlewares)){
+	// 				$verifyAuth = \PSF::getConfig()->settings['verifyauth'] ?? FALSE;
+
+	// 				if(!empty($verifyAuth) && $verifyAuth !== FALSE){
+	// 					$objVerify = new $verifyAuth[0];
+	// 					if(is_callable([$objVerify, $verifyAuth[1]])){
+	// 						$doValid = call_user_func([$objVerify, $verifyAuth[1]]);
+	// 						if(is_object($doValid) || $doValid === TRUE){
+	// 							self::$auth = $doValid;			
+	// 						}else{
+	// 							$return = ["Erro ao validar a autenticação", (is_bool($doValid) ? NULL : (is_array($doValid) ? $doValid : ['msg' => $doValid])), StatusCode::UNAUTHORIZED];
+	// 							$this->saveLoggin($urlFind, $filterMetch, $return);
+
+	// 							Http::response("Erro ao validar a autenticação", (is_bool($doValid) ? NULL : (is_array($doValid) ? $doValid : ['msg' => $doValid])), StatusCode::UNAUTHORIZED);
+	// 							throw new \Exception(StatusCode::UNAUTHORIZED);
+	// 						}
+	// 					}
+	// 				}else{
+	// 					throw new \Exception(StatusCode::UNAUTHORIZED);
+	// 				}
+	// 			}
+
+	// 			$this->validFields($filterMetch);
+
+	// 			try{
+	// 				$return = call_user_func_array([new $filterMetch['class'], $filterMetch['name']], $this->fields);
+	// 				$this->saveLoggin($urlFind, $filterMetch, $return);
+	// 				return $return;
+	// 			}catch (Exception $e) {					
+	// 				throw new \Exception(StatusCode::NOT_FOUND);
+	// 			}
+	// 		}
+	// 	}
+	// 	throw new \Exception(StatusCode::NOT_FOUND);
+	// }
+
 	private function callMethodRoute(){
 		$urlFind = self::clearUrl($_GET['_url']);
-
 		if(substr($urlFind, 0, 1) == 'v' && is_numeric(substr($urlFind, 1, 1))){
 			$this->version = (int) substr($urlFind, 1, 1);
 			$urlFind = substr($urlFind, 3);
 		}
-
 		$explodeUrl = explode("/", $urlFind);
 		$this->piecesArr = $explodeUrl;
 		$j = count($explodeUrl);
-
 		$filterMetch = array_filter($this->routes, function($item){
-		    return $item['attributes']['arguments']['method'] == $this->method;
+			return $item['attributes']['arguments']['method'] == $this->method;
 		});
-
 		if(!empty($this->version)){
 			$filterMetch = array_filter($filterMetch, function($item){
-			    return $item['attributes']['arguments']['version'] == $this->version;
+				return $item['attributes']['arguments']['version'] == $this->version;
 			});
 		}
-
 		$this->pieces = empty($explodeUrl[0]) ? count($explodeUrl) - 1 : count($explodeUrl);
-
 		$filterMetch = array_filter($filterMetch, function($item){
 			return count(explode("/", $item['attributes']['arguments']['path'])) == $this->pieces;
 		});
-
 		$filterMetch = array_filter($filterMetch, function($item){
 			$explodeFields 	= explode("/", $item['attributes']['arguments']['path']);
-
 			$check = true;
 			for ($i=0; $i < $this->pieces; $i++) {
 				if(substr($explodeFields[$i], 0, 1) == "{" && substr($explodeFields[$i], -1) == "}"){
 					$getExpression = explode(":", substr($explodeFields[$i], 1, -1))[1];
-
+	
 					if(isset(self::$patterns[$getExpression]) && !empty(self::$patterns[$getExpression])){
 						if(!preg_match(self::$patterns[$getExpression], $this->piecesArr[$i])){
 							$check = false;
@@ -197,54 +291,68 @@ class Router{
 					}
 				}
 			}
-
+	
 			if($check){
 				return $item;
 			}	
 		});
-
 		if(empty($filterMetch) || count($filterMetch) > 1){
 			throw new \Exception("Não foi possível encontrar a rota correspondente.");
 		}else{
 			$filterMetch = (reset($filterMetch));
-
 			if(is_callable([new $filterMetch['class'], $filterMetch['name']])){
 				$middlewares = isset($filterMetch['attributes']['arguments']['middlewares']) && is_array($filterMetch['attributes']['arguments']['middlewares']) ? $filterMetch['attributes']['arguments']['middlewares'] : [];
-
-				if(in_array('authentication', $middlewares)){
-					$verifyAuth = \PSF::getConfig()->settings['verifyauth'] ?? FALSE;
-
-					if(!empty($verifyAuth) && $verifyAuth !== FALSE){
-						$objVerify = new $verifyAuth[0];
-						if(is_callable([$objVerify, $verifyAuth[1]])){
-							$doValid = call_user_func([$objVerify, $verifyAuth[1]]);
-							if(is_object($doValid) || $doValid === TRUE){
-								self::$auth = $doValid;			
-							}else{
-								$return = ["Erro ao validar a autenticação", (is_bool($doValid) ? NULL : (is_array($doValid) ? $doValid : ['msg' => $doValid])), StatusCode::UNAUTHORIZED];
-								$this->saveLoggin($urlFind, $filterMetch, $return);
-
-								Http::response("Erro ao validar a autenticação", (is_bool($doValid) ? NULL : (is_array($doValid) ? $doValid : ['msg' => $doValid])), StatusCode::UNAUTHORIZED);
-								throw new \Exception(StatusCode::UNAUTHORIZED);
+				foreach ($middlewares as $middlewareClass) {
+					if ($middlewareClass == "authentication") {
+						$this->authMiddleware($urlFind, $filterMetch);
+					} else if($middlewareClass){
+						$className = "\\App\\Middlewares\\{$middlewareClass}";
+						if(!class_exists($className)){
+							throw new \Exception(StatusCode::NOT_FOUND);
+						}
+						$middlewareInstance = new $className();
+						if (method_exists($middlewareInstance, 'handle')) {
+							$response = $middlewareInstance->handle($_REQUEST, function($req) {
+								return true; 
+							});
+							if ($response !== true) {
+								throw new \Exception($response["mensagem"] ?? NULL,  StatusCode::NOT_FOUND);
 							}
 						}
-					}else{
-						throw new \Exception(StatusCode::UNAUTHORIZED);
 					}
 				}
-
 				$this->validFields($filterMetch);
-
-				try{
+				try {
 					$return = call_user_func_array([new $filterMetch['class'], $filterMetch['name']], $this->fields);
 					$this->saveLoggin($urlFind, $filterMetch, $return);
 					return $return;
-				}catch (Exception $e) {					
+				} catch (Exception $e) {
 					throw new \Exception(StatusCode::NOT_FOUND);
 				}
 			}
 		}
 		throw new \Exception(StatusCode::NOT_FOUND);
+	}
+
+	function authMiddleware($urlFind, $filterMetch) {
+		$verifyAuth = \PSF::getConfig()->settings['verifyauth'] ?? FALSE;
+		if(!empty($verifyAuth) && $verifyAuth !== FALSE){
+			$objVerify = new $verifyAuth[0];
+			if(is_callable([$objVerify, $verifyAuth[1]])){
+				$doValid = call_user_func([$objVerify, $verifyAuth[1]]);
+				if(is_object($doValid) || $doValid === TRUE){
+					self::$auth = $doValid;			
+				}else{
+					$return = ["Erro ao validar a autenticação", (is_bool($doValid) ? NULL : (is_array($doValid) ? $doValid : ['msg' => $doValid])), StatusCode::UNAUTHORIZED];
+					$this->saveLoggin($urlFind, $filterMetch, $return);
+
+					Http::response("Erro ao validar a autenticação", (is_bool($doValid) ? NULL : (is_array($doValid) ? $doValid : ['msg' => $doValid])), StatusCode::UNAUTHORIZED);
+					throw new \Exception(StatusCode::UNAUTHORIZED);
+				}
+			}
+		}else{
+			throw new \Exception(StatusCode::UNAUTHORIZED);
+		}
 	}
 
 	private function validFields(array $item) : void{
