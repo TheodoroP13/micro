@@ -94,7 +94,7 @@ class ModelQuery{
             }
 
             if($driver == DBDriver::SQLServer){
-                $result =  "[" . $field[1] . "]";
+                $result =  "[" . $tableName . "].[" . $field[1] . "]";
             }
 
             return $result . (!empty($field[2]) ? (' AS ' . $field[2]): '');           
@@ -134,7 +134,7 @@ class ModelQuery{
 
                     if($driver == DBDriver::SQLServer){
                         // return '[' . $this->obj->tableName . "].[" . $field . "]";
-                        return "[" . $field . "]";
+                        return "[" . Model::getTable($this->obj::class) . "].[" . $field . "]";
                     }
 
                     return Model::getTable($this->obj::class) . "." . $field;

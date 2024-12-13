@@ -322,7 +322,7 @@ class Model{
 				}));
 
 				if(!empty($column)){
-					$response->{$property->getName()} = !empty($data[$column[0]->getArguments()[0]]) ? $data[$column[0]->getArguments()[0]] : NULL;
+					$response->{$property->getName()} = !empty($data[$column[0]->getArguments()[0]]) || (isset($data[$column[0]->getArguments()[0]]) && $data[$column[0]->getArguments()[0]] == 0) ? $data[$column[0]->getArguments()[0]] : NULL;
 				}
 			}
 		}else{
