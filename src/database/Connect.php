@@ -4,7 +4,7 @@ namespace Psf\Database;
 
 use \Psf\Enumerators\{DBDriver};
 
-class Connect{      
+class Connect{
     static $connect = null;
     static $tables = null;
 

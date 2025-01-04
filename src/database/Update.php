@@ -30,11 +30,13 @@ class Update extends Connect{
             $configDb   = \PSF::getConfig()->db;
             $driver     = !empty($configDb[$database]['driver']) ? $configDb[$database]['driver'] : DBDriver::MySQL;
 
-            // if(!empty($parseString) && !empty($obj->places)){
-            //     parse_str($parseString, $obj->places);
-            // }
+            if(!empty($parseString) && !empty($obj->places)){
+                parse_str($parseString, $obj->places);
+            }else{
+                $obj->places = [];
+            }
 
-            parse_str($parseString, $obj->places);
+            // parse_str($parseString, $obj->places);
 
             if($driver == DBDriver::MySQL){
                 foreach($obj->data as $key => $value) {
@@ -51,6 +53,7 @@ class Update extends Connect{
             $places = implode(', ', $places);
 
             $obj->update = "UPDATE {$obj->table} SET {$places} {$obj->terms}";
+
             $obj->update = $obj->connection->prepare($obj->update);
         
             try{

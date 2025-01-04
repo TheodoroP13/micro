@@ -774,7 +774,7 @@ class ModelQuery{
         $result = $Read->getResult();
 
         foreach($result as &$item){
-            $item = Model::serializeData($this->obj::class, $item, $this->query['asArray']);
+            $item = Model::serializeData($this->obj::class, $item, $this->query['asArray'], $this->query['leftJoins']);
         }
 
         if($Read->getRowCount() == 1 && $this->query['limit'] == 1){
@@ -796,8 +796,6 @@ class ModelQuery{
         $countTotal->query['offset'] = NULL;
         $countTotal->query['order'] = NULL;
         $countTotal->query['groupBy'] = NULL;
-
-        // var_dump($countTotal->getRowQuery());
 
         return $countTotal->execute();
     }
@@ -928,5 +926,35 @@ class ModelQuery{
         }
 
         return '`' . Model::getTable($this->obj::class) . '`.*';
+    }
+
+    public function leftJoinAndSelect(array|string $table, string $attr, string $query){
+        $driver = !empty($this->configDb['driver']) ? $this->configDb['driver'] : DBDriver::MySQL;
+        $columns = Model::getColumnByProp(is_array($table) ? $table[0] : $table);
+
+        if(!empty($columns) && is_array($columns)){
+            if($driver == DBDriver::MySQL){
+                $fieldsToAdd = array_map(function($item) use ($table, $attr){
+                    $field = (is_array($table) ? $table[1] : $table) . '.' . $item . ' AS ' . $attr . '_' . $item;
+                    return $this->generateField($field);
+                }, $columns);
+            }
+
+            if($driver == DBDriver::SQLServer){
+                $fieldsToAdd = implode(',', array_map(function($item){
+                    return '[' . Model::getTable($this->obj::class) . '].[' . $item . ']';
+                }, $columns));
+            }
+        }
+
+        $this->query['fields'] = array_merge((!empty($this->query['fields']) ? $this->query['fields'] : []), $fieldsToAdd);
+
+        $this->query['leftJoins'][] = [
+            'table'         => $table, 
+            'query'         => $query,
+            'andSelect'     => $attr,
+        ];
+
+        return $this;
     }
 }

@@ -91,6 +91,16 @@ class Model{
 			if(!empty($column)){
 				$column = $column[0]->getArguments()[0];
 
+				$typeValue = array_values(array_filter($attributes, function($attr) use ($property){
+					return $attr->getName() === 'Type' && !empty($attr->getArguments()[0]);
+				}));
+
+				if(!empty($typeValue)){
+					$typeValue = $typeValue[0]->getArguments()[0];
+				}else{
+					$typeValue = NULL;
+				}
+
 				$standardValue = array_values(array_filter($attributes, function($attr) use ($property){
 					return $attr->getName() === 'Standard' && !empty($attr->getArguments()[0]);
 				}));
@@ -101,6 +111,8 @@ class Model{
 					}else{
 						if(strtoupper($standardValue[0]->getArguments()[0]) === 'NOW()'){
 							$object->{$property->getName()} = date('Y-m-d H:i:s');
+						}else if(strtoupper($standardValue[0]->getArguments()[0]) === 'UUIDV4'){
+							$object->{$property->getName()} = UUID::generate('4');
 						}else{
 							$object->{$property->getName()} = $standardValue[0]->getArguments()[0];
 						}
@@ -114,8 +126,14 @@ class Model{
 				}));
 
 				if(!empty($columnCreatedDate) && empty($object->{$property->getName()})){
-					$object->{$property->getName()} = date('Y-m-d H:i:s');
-					$fields[$column] = date('Y-m-d H:i:s');
+					if($typeValue == 'timestamp'){
+						$newValue = time();
+					}else{
+						$newValue = date('Y-m-d H:i:s');
+					}
+
+					$object->{$property->getName()} = $newValue;
+					$fields[$column] = $newValue;
 				}
 
 				$columnUpdatedDate = array_values(array_filter($attributes, function($attr) use ($property){
@@ -123,8 +141,14 @@ class Model{
 				}));
 
 				if(!empty($columnUpdatedDate) && empty($object->{$property->getName()})){
-					$object->{$property->getName()} = date('Y-m-d H:i:s');
-					$fields[$column] = date('Y-m-d H:i:s');
+					if($typeValue == 'timestamp'){
+						$newValue = time();
+					}else{
+						$newValue = date('Y-m-d H:i:s');
+					}
+
+					$object->{$property->getName()} = $newValue;
+					$fields[$column] = $newValue;
 				}
 
 				$required = array_values(array_filter($attributes, function($attr) use ($property){
@@ -309,7 +333,7 @@ class Model{
 		return !empty($database) ? $database[0]->getArguments()[0] : 'default'; 
 	}
 
-	public static function serializeData($class, array $data, bool $asArray = FALSE) : object|array|null{
+	public static function serializeData($class, array $data, bool $asArray = FALSE, null|array $joins = []) : object|array|null{
 		$response = new $class;
 		$refClass = new \ReflectionClass($class);
 
@@ -323,6 +347,35 @@ class Model{
 
 				if(!empty($column)){
 					$response->{$property->getName()} = !empty($data[$column[0]->getArguments()[0]]) || (isset($data[$column[0]->getArguments()[0]]) && $data[$column[0]->getArguments()[0]] == 0) ? $data[$column[0]->getArguments()[0]] : NULL;
+				}else{
+					if(!empty($joins)){
+						$findJoinForProperty = array_filter($joins, function($item) use ($property){
+							return !empty($item['andSelect']) && $item['andSelect'] == $property->getName();
+						});
+
+						if(!empty($findJoinForProperty)){
+							$findJoinForProperty = $findJoinForProperty[0];
+							
+							foreach ($data as $key => $value) {
+								if(str_starts_with($key, $findJoinForProperty['andSelect'] . '_')){
+									$classRelation = is_array($findJoinForProperty['table']) ? $findJoinForProperty['table'][0] : $findJoinForProperty['table'];
+
+									if(!is_object($response->{$findJoinForProperty['andSelect']})){
+										$response->{$findJoinForProperty['andSelect']} = new $classRelation;
+									}
+
+									$objectField = explode('_', $key);
+									unset($objectField[0]); 
+
+									$getColumnRelation = Model::getPropByColumn($classRelation, implode('_', $objectField));
+
+									if(!empty($getColumnRelation)){
+										$response->{$findJoinForProperty['andSelect']}->{$getColumnRelation} = $value;
+									}
+								}							
+							}
+						}
+					}
 				}
 			}
 		}else{

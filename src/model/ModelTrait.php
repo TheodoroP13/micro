@@ -2,11 +2,15 @@
 
 namespace Psf\Model;
 
-// use \Pgf\Http\Http;
-
 trait ModelTrait{
     public static function find() : ModelQuery {
         return new ModelQuery(self::class);
+    }
+
+    public static function findById(int $id) : ModelQuery {
+        return (new ModelQuery(self::class))->fields([
+            self::class . '.*',
+        ])->andWhere([self::class . '.id' => $id]);
     }
 
     public function __call($function, $value){
