@@ -1,5 +1,11 @@
 <?php
 
+use Spatie\Ignition\Ignition;
+
+Ignition::make()
+->setTheme('dark')
+->register();
+
 define('DR', DIRECTORY_SEPARATOR);
 define('ROOT', realpath($_SERVER['DOCUMENT_ROOT'] ?: dirname(__FILE__)));
 
