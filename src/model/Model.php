@@ -285,15 +285,15 @@ class Model{
 	}
 
 	public function getIdentityColumn(){
-		$configDb 	= \PSF::getConfig()->db;
-		$driver 	= !empty($configDb[$this->database]['driver']) ? $configDb[$this->database]['driver'] : DBDriver::MySQL;
+		$configDb 	= \PSF::getConfig()->db[Model::getDatabase($this)];
+		$driver 	= !empty($configDb['driver']) ? $configDb['driver'] : DBDriver::MySQL;
 
-		$db = Connect::getConnection($this->database);
+		$db = Connect::getConnection(Model::getDatabase($this));
 
 		if($driver == DBDriver::SQLServer){
 			$query = "SELECT COLUMN_NAME
 			FROM INFORMATION_SCHEMA.COLUMNS
-			WHERE TABLE_NAME = '" . $this->table . "' AND COLUMNPROPERTY(OBJECT_ID(TABLE_SCHEMA + '.' + TABLE_NAME), COLUMN_NAME, 'IsIdentity') = 1";
+			WHERE TABLE_NAME = '" . $this->getTableName() . "' AND COLUMNPROPERTY(OBJECT_ID(TABLE_SCHEMA + '.' + TABLE_NAME), COLUMN_NAME, 'IsIdentity') = 1";
 		}
 
 		if(isset($query)){
