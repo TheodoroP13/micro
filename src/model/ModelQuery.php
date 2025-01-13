@@ -848,11 +848,11 @@ class ModelQuery{
     }
 
     public function query($query, $parseString = null, $database = 'default'){
-        if(!isset($this->query['fields']) || empty($this->query['fields'])){
-            $query = "* FROM " . $this->handleTableName() . " " . $query;
-        }else{
+        if(isset($this->query['fields']) && !empty($this->query['fields'])){
             $fieldsQuery = implode(", ", $this->query['fields']);
             $query = $fieldsQuery . " FROM " . $this->handleTableName() . " " . $query;
+        }else{
+            $query = "SELECT " . $query;
         }
 
         if(!empty($parseString) && is_array($parseString)){
@@ -871,11 +871,11 @@ class ModelQuery{
 
         $Read = new \Prospera\Database\Read($this->obj->databaseConnect ?? null);
         $Read->exe(
-            $this->obj->table,
-            $query,
-            $stringParseString,
-            $database,
-            true
+            table: Model::getTable($this->obj::class),
+            string: $query,
+            parseString: $stringParseString,
+            database: $database,
+            free: true
         ); 
 
         return $this->queryResult($Read);
